@@ -1,28 +1,4 @@
-# iFood Clone (starter)
+# TreeLivery (starter)
 
 This repository contains a minimal starter project: a FastAPI backend and a React + Tailwind frontend scaffold.
 
-Backend:
-- Location: ./backend
-- Run: Set your PostgreSQL DATABASE_URL in backend/app/database.py and run:
-  ```bash
-  cd backend
-  pip install -r requirements.txt
-  uvicorn app.main:app --reload
-  ```
-
-Frontend:
-- Location: ./frontend
-- Run:
-  ```bash
-  cd frontend
-  npm install
-  npm run dev
-  ```
-
-This is a starter scaffold based on the database schema you provided. It contains:
-- SQLAlchemy models for a subset of the schema.
-- Basic CRUD endpoints for restaurantes and pratos.
-- Simple React frontend that lists restaurants.
-
-You can extend models, add authentication, payments, ordering flows and styling as needed.
