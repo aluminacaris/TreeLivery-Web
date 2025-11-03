@@ -1,0 +1,41 @@
+path(endpoint) operators
+
+POST: to create data.
+GET: to read data.
+PUT: to update data.
+DELETE: to delete data
+
+CRUD = PGPD !!!
+
+=================================================
+
+função assincrona/async def
+
+async = deixa o pc fazer outras coisas enquanto ele roda o código, numa função sincrona ele trava o sistema unicamente pra requisição q ta sendo feita
+
+=================================================
+
+decorator
+
+ma função que recebe outra função como argumento e retorna uma nova função.
+
+@app.get("/hello") é um decorator.
+
+Ele recebe a função ola e registra ela como uma rota GET no caminho /hello.
+Assim, o FastAPI sabe que quando alguém acessa /hello, deve chamar a função ola().
+
+=================================================
+
+a ordem dos paths importa
+se quiser por um especifico tem q colocar antes doq recebe o parametro
+
+@app.get("/users")
+async def read_users():
+    return ["Rick", "Morty"]
+
+
+@app.get("/users")
+async def read_users2():
+    return ["Bean", "Elfo"]
+
+=================================================
