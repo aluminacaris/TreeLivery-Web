@@ -42,7 +42,6 @@ class ItemPedidoCreate(BaseModel):
     quantidade: int 
     
 class PedidoCreate(BaseModel):
-    usuario_id: Optional[UUID]
     restaurante_id: UUID
     itens: List[ItemPedidoCreate]
     

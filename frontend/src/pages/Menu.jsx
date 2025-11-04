@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext'
 export default function Menu() {
   const { restauranteId } = useParams()
   const [pratos, setPratos] = useState([])
-  const { addToCart } = useCart()
+  const { cartItems, addToCart, clearCart, total } = useCart()
   const navigate = useNavigate()
   
 
@@ -15,6 +15,31 @@ export default function Menu() {
       .then(r => setPratos(r.data))
       .catch(() => {})
   }, [restauranteId])
+
+  async function finalizarPedido(){
+    if (cartItems.length === 0){
+      alert("Seu carrinho está vazio!")
+      return
+    }
+
+    try{
+      const payload = {
+        restaurante_id: restauranteId,
+        itens: cartItems.map(item => ({
+          prato_id: item.prato_id,
+          quantidade: item.quantity
+        }))
+      }
+
+      const response = await axios.post('http://localhost:8000/pedidos/', payload)
+      console.log("✅ Pedido criado:", response.data)
+      alert(`Pedido realizado com sucesso! ID do pedido: ${response.data.pedido_id}`)
+      clearCart()
+    } catch(err){
+      console.error("❌ Erro ao criar pedido:", err)
+      alert("Erro ao finalizar pedido. Tente novamente.")
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -40,6 +65,31 @@ export default function Menu() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Carrinho*/}
+       <div className="bg-gray-100 p-4 rounded-lg shadow">
+        <h3 className="font-bold mb-2">🛒 Carrinho</h3>
+        {cartItems.length === 0 ? (
+          <p className="text-gray-500">Seu carrinho está vazio.</p>
+        ) : (
+          <ul className="mb-2">
+            {cartItems.map(item => (
+              <li key={item.prato_id} className="flex justify-between border-b py-1">
+                <span>{item.nome} x {item.quantity}</span>
+                <span>R$ {(item.preco * item.quantity).toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <p className="font-bold">Total: R$ {total.toFixed(2)}</p>
+        <button
+          onClick={finalizarPedido}
+          className=" w-full py-2 rounded mt-3 bg-verdeclaro text-esc hover:bg-marelo transition"
+        >
+          Finalizar Pedido
+        </button>
       </div>
     </div>
   )
