@@ -37,3 +37,25 @@ class Prato(Base):
     categoria = sa.Column(sa.String(50))
     disponivel = sa.Column(sa.Boolean, default=True)
     created_at = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
+
+# relacionamento 1--n com itemPedido
+class Pedido(Base):
+    __tablename__ = "pedidos"
+    pedido_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    usuario_id = sa.Column(UUID(as_uuid=True), nullable=True)  # deixamos opcional por enquanto
+    restaurante_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("restaurantes.restaurante_id"))
+    data_pedido = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
+    status = sa.Column(sa.String(30), default="Recebido")  # Pode ser: Recebido, Em preparo, Entregue
+    total = sa.Column(sa.Numeric(10, 2), nullable=False)
+    itens = sa.orm.relationship("ItemPedido", back_populates="pedido", cascade="all, delete-orphan")
+
+
+class ItemPedido(Base):
+    __tablename__ = "itens_pedido"
+    item_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pedido_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("pedidos.pedido_id", ondelete="CASCADE"))
+    prato_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("pratos.prato_id"))
+    quantidade = sa.Column(sa.Integer, nullable=False)
+    preco_unitario = sa.Column(sa.Numeric(10, 2), nullable=False)
+
+    pedido = sa.orm.relationship("Pedido", back_populates="itens")

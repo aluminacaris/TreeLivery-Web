@@ -1,5 +1,7 @@
 from sqlalchemy import select
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from . import models, schemas
 from uuid import UUID
 
@@ -48,3 +50,50 @@ async def create_prato(db: AsyncSession, restaurante_id: UUID, payload: schemas.
     await db.commit()       # 💡 importante: salva no banco
     await db.refresh(prato) # atualiza com dados do banco (ex: prato_id)
     return prato
+
+async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
+    from . import models
+    
+    total = 0
+    # calcula o total
+    pedido = models.Pedido(
+        restaurante_id=pedido_data.restaurante_id,
+        total=0  # atualizamos depois
+    )    
+    db.add(pedido)
+    await db.flush() #pra gerar o pedido_id, flush manda pro banco mas n da o commit, entao ele ja gera um ID
+    # diferença do flush pro commit é q da pra dar rollback, no commit nao, ele confirma definitivamente as operações
+    
+    for item in pedido_data.itens:
+        result = await db.execute(sa.select(models.Prato).where(models.Prato.prato_id==item.prato_id))
+        prato = result.scalar_one_or_none()
+        
+        if not prato:
+            raise Exception(f"Prato {item.prato_id} não encontrado")
+        
+        print(f"🧾 Adicionando prato {prato.nome} com preço {prato.preco}")
+
+        preco = float(prato.preco)
+        total += preco * item.quantidade
+        
+        novo_item = models.ItemPedido(
+            pedido_id=pedido.pedido_id,
+            prato_id=item.prato_id,
+            quantidade=item.quantidade,
+            preco_unitario=preco #puxa automatico
+        )
+        db.add(novo_item)
+        await db.flush()
+    
+    pedido.total = total
+    await db.flush()
+    await db.commit()
+    
+    result = await db.execute(
+    sa.select(models.Pedido)
+    .options(selectinload(models.Pedido.itens))
+    .where(models.Pedido.pedido_id == pedido.pedido_id)
+)
+    pedido_com_itens = result.scalar_one()
+
+    return pedido_com_itens

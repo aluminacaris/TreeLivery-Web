@@ -36,3 +36,26 @@ class PratoOut(PratoCreate):
     prato_id: UUID
     restaurante_id: UUID
     disponivel: bool
+
+class ItemPedidoCreate(BaseModel):
+    prato_id: UUID
+    quantidade: int 
+    
+class PedidoCreate(BaseModel):
+    usuario_id: Optional[UUID]
+    restaurante_id: UUID
+    itens: List[ItemPedidoCreate]
+    
+class ItemPedidoOut(ItemPedidoCreate):
+    item_id: UUID
+    pedido_id: UUID
+    preco_unitario: Decimal
+
+class PedidoOut(BaseModel):
+    pedido_id: UUID
+    usuario_id: Optional[UUID]
+    restaurante_id: UUID
+    data_pedido: Any
+    status: str
+    total: Decimal
+    itens: List[ItemPedidoOut]
