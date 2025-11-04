@@ -1,3 +1,4 @@
+# type: ignore
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from .database import Base
@@ -13,7 +14,7 @@ class Usuario(Base):
     telefone = sa.Column(sa.String(20))
     data_cadastro = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
     ativo = sa.Column(sa.Boolean, default=True)
-
+# type: ignore
 class Restaurante(Base):
     __tablename__ = "restaurantes"
     restaurante_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

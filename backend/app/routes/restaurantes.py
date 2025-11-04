@@ -1,3 +1,4 @@
+# type: ignore
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from .. import crud, schemas

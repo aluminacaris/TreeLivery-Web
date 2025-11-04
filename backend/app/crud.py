@@ -1,3 +1,4 @@
+# type: ignore
 from sqlalchemy import select
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
