@@ -5,15 +5,6 @@ from .database import Base
 import uuid
 from sqlalchemy.sql import func
 
-class Usuario(Base):
-    __tablename__ = "usuarios"
-    usuario_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    nome = sa.Column(sa.String(100), nullable=False)
-    email = sa.Column(sa.String(255), nullable=False, unique=True)
-    senha_hash = sa.Column(sa.String(255), nullable=False)
-    telefone = sa.Column(sa.String(20))
-    data_cadastro = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
-    ativo = sa.Column(sa.Boolean, default=True)
 # type: ignore
 class Restaurante(Base):
     __tablename__ = "restaurantes"
@@ -43,7 +34,7 @@ class Prato(Base):
 class Pedido(Base):
     __tablename__ = "pedidos"
     pedido_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    usuario_id = sa.Column(UUID(as_uuid=True), nullable=True)  # deixamos opcional por enquanto
+    usuario_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("usuarios.usuario_id"), nullable=True)             
     restaurante_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("restaurantes.restaurante_id"))
     data_pedido = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
     status = sa.Column(sa.String(30), default="Recebido")  # Pode ser: Recebido, Em preparo, Entregue
@@ -60,3 +51,13 @@ class ItemPedido(Base):
     preco_unitario = sa.Column(sa.Numeric(10, 2), nullable=False)
 
     pedido = sa.orm.relationship("Pedido", back_populates="itens")
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    usuario_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    nome = sa.Column(sa.String(100), nullable=False)
+    email = sa.Column(sa.String(120), unique=True, nullable=False)
+    senha_hash = sa.Column(sa.String(255), nullable=False)
+    criado_em = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
+    pedidos = sa.orm.relationship("Pedido", backref="usuario")

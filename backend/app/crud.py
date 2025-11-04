@@ -72,8 +72,6 @@ async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
         if not prato:
             raise Exception(f"Prato {item.prato_id} não encontrado")
         
-        print(f"🧾 Adicionando prato {prato.nome} com preço {prato.preco}")
-
         preco = float(prato.preco)
         total += preco * item.quantidade
         

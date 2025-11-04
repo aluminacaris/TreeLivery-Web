@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List, Any
 from uuid import UUID
@@ -58,3 +59,23 @@ class PedidoOut(BaseModel):
     status: str
     total: Decimal
     itens: List[ItemPedidoOut]
+    
+class UsuarioCreate(BaseModel):
+    nome: str
+    email: str
+    senha: str
+
+
+class UsuarioOut(BaseModel):
+    usuario_id: UUID
+    nome: str
+    email: str
+    criado_em: datetime
+    
+    class Config:
+        orm_mode = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
