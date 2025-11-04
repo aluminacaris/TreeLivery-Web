@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useParams } from 'react-router-dom'
+import { useCart } from '../context/CartContext'
 
 export default function Menu() {
   const { restauranteId } = useParams()
   const [pratos, setPratos] = useState([])
+  const { addToCart } = useCart()
 
   useEffect(() => {
     axios.get(`http://localhost:8000/restaurantes/${restauranteId}/menu`)
@@ -21,6 +23,11 @@ export default function Menu() {
             <h3 className="font-semibold">{p.nome}</h3>
             <p className="text-gray-600">{p.descricao}</p>
             <p className="mt-2 font-bold text-gray-800">R$ {p.preco}</p>
+             <button
+              onClick={() => addToCart(p)}
+              className="mt-2 bg-verdeclaro text-esc px-3 py-1 rounded hover:bg-marelo transition"
+            >Adicionar
+            </button>
           </div>
         ))}
       </div>

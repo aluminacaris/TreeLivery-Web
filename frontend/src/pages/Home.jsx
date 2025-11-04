@@ -1,10 +1,17 @@
 import React, {useEffect, useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { useCart } from '../context/CartContext'
 
-function Navbar(){ return (
-  <div className="bg-white shadow p-4 flex justify-between items-center">
-    <div className="text-xl font-bold">TreeLivery</div>
+function Navbar(){
+  const { cartItems, total } = useCart()
+  return (
+    <div className="bg-white shadow p-4 flex justify-between items-center">
+      <div className="text-xl font-bold">TreeLivery</div>
+        <div className="flex items-center gap-4">
+        <span>Carrinho: {cartItems.length} itens</span>
+        <span>Total: R$ {total.toFixed(2)}</span>
+      </div>
     <div>Olá, cliente</div>
   </div>
 )}
