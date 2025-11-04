@@ -3,9 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import restaurantes
 from .database import Base, engine
 
-app = FastAPI(title="iFood-Clone API")
+app = FastAPI(title="TreeLivery API")
 
 # --- 🔧 Adicionando CORS ---
+# CORS permite o acesso do FrontEnd ao BackEnd, FastAPI nativamente bloqueia isso por segurança
 origins = [
     "http://localhost:5173",  # frontend local
     "http://127.0.0.1:5173",
@@ -13,16 +14,16 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins, #permite todas as origens listadas
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"], #permite todos os métodos (GET, POST, etc) HTTP
     allow_headers=["*"],
 )
 # ----------------------------
 
-app.include_router(restaurantes.router)
+app.include_router(restaurantes.router) #inclui as rotas de restaurantes
 
-# Cria tabelas no startup (apenas dev)
+# Cria tabelas no startup do app
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:

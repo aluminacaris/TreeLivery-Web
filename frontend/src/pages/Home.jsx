@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
 function Navbar(){ return (
@@ -8,16 +9,21 @@ function Navbar(){ return (
   </div>
 )}
 
-function Card({r}){
+function Card({r}) {
+  const navigate = useNavigate()
   return (
-    <div className="bg-white rounded shadow p-4">
+    <div
+      className="bg-white rounded shadow p-4 hover:shadow-lg cursor-pointer"
+      onClick={() => navigate(`/restaurante/${r.restaurante_id}`)}
+    >
       <h3 className="font-semibold">{r.nome_fantasia}</h3>
       <p className="text-sm text-gray-600">{r.descricao}</p>
-      <div className="mt-2 text-sm text-gray-700">Entrega: {r.tempo_medio_entrega ?? '—'} min • Taxa: R$ {r.taxa_entrega_base ?? '0.00'}</div>
+      <div className="mt-2 text-sm text-gray-700">
+        Entrega: {r.tempo_medio_entrega ?? '—'} min • Taxa: R$ {r.taxa_entrega_base ?? '0.00'}
+      </div>
     </div>
   )
 }
-
 export default function Home(){
   const [rests, setRests] = useState([])
   useEffect(()=>{ axios.get('http://localhost:8000/restaurantes/').then(r=>setRests(r.data)).catch(()=>{}) },[])

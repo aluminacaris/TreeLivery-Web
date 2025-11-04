@@ -5,31 +5,46 @@ from uuid import UUID
 
 async def get_restaurants(db: AsyncSession, limit: int = 50):
     q = await db.execute(select(models.Restaurante).where(models.Restaurante.ativo==True).limit(limit))
-    return q.scalars().all()
+    return q.scalars().all() #executa e retorna resultados 
 
 async def get_restaurant(db: AsyncSession, restaurante_id: UUID):
     q = await db.execute(select(models.Restaurante).where(models.Restaurante.restaurante_id==restaurante_id))
-    return q.scalar_one_or_none()
+    return q.scalar_one_or_none() #retorna 1 ou nenhum resultado
 
 async def create_restaurant(db: AsyncSession, rest: schemas.RestauranteCreate):
-    obj = models.Restaurante(
+    obj = models.Restaurante( # mapeia schema p/ modelo
         nome_fantasia=rest.nome_fantasia,
         razao_social=rest.razao_social,
         descricao=rest.descricao,
         telefone=rest.telefone,
         tempo_medio_entrega=rest.tempo_medio_entrega,
         taxa_entrega_base=rest.taxa_entrega_base,
-        endereco=rest.endereco.dict()
-    )
-    db.add(obj)
-    await db.commit()
-    await db.refresh(obj)
-    return obj
+        endereco=rest.endereco.dict() #converte pydantic p/ dict (JSONB
+    )   
+    db.add(obj) #adiciona o obj a sessao
+    await db.commit() #commita as mudanças
+    await db.refresh(obj) #atualiza o obj com dados do db (ex: pk gerada)
+    return obj #retorna o obj criado
 
-async def get_menu(db: AsyncSession, restaurante_id: UUID):
+async def get_menu(db: AsyncSession, restaurante_id: UUID): #mostra os pratos disponiveis de um restaurante
     q = await db.execute(select(models.Prato).where(models.Prato.restaurante_id==restaurante_id, models.Prato.disponivel==True))
-    return q.scalars().all()
+    return q.scalars().all() #mostra todos os pratos disponiveis
 
-async def get_prato(db: AsyncSession, prato_id: UUID):
+async def get_prato(db: AsyncSession, prato_id: UUID): #mostra só um prato pelo id
     q = await db.execute(select(models.Prato).where(models.Prato.prato_id==prato_id))
     return q.scalar_one_or_none()
+
+async def create_prato(db: AsyncSession, restaurante_id: UUID, payload: schemas.PratoCreate):
+    from . import models  # evitar import circular
+    prato = models.Prato(
+        restaurante_id=restaurante_id,
+        nome=payload.nome,
+        descricao=payload.descricao,
+        preco=payload.preco,
+        categoria=payload.categoria,
+        disponivel=True
+    )
+    db.add(prato)
+    await db.commit()       # 💡 importante: salva no banco
+    await db.refresh(prato) # atualiza com dados do banco (ex: prato_id)
+    return prato
