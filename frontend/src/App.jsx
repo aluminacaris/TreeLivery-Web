@@ -7,7 +7,7 @@ import Layout from "./layout/layout";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Menu from "./pages/Menu";
-// import Cadastro from "./pages/Cadastro";
+import Cadastro from "./pages/Cadastro";
 
 export default function App() {
   return (
@@ -19,7 +19,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
-              {/* <Route path="/cadastro" element={<Cadastro />} /> */}
+              <Route path="/cadastro" element={<Cadastro />} />
             </Route>
 
             {/* Layout protegido: só usuários logados acessam */}

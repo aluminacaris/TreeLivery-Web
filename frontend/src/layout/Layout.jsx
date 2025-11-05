@@ -2,6 +2,7 @@
 import React from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import Navbar from "../components/navbar";
+import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 
 export default function Layout({ protegido = false }) {
@@ -27,6 +28,8 @@ export default function Layout({ protegido = false }) {
       <main className="p-4 max-w-5xl mx-auto">
         <Outlet /> {/* aqui o React Router renderiza a página */}
       </main>
+
+      <Footer />
     </div>
   );
 }
