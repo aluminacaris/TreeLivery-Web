@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
 from .. import schemas, models, auth, crud
+from ..auth import obter_usuario_atual
 from ..database import get_db
 import sqlalchemy as sa
 
@@ -20,3 +21,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
 
     access_token = auth.criar_token({"sub": usuario.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me", response_model=schemas.UsuarioOut)
+async def get_usuario_atual(usuario: models.Usuario = Depends(obter_usuario_atual)):
+    """
+    Retorna os dados do usuário autenticado com base no token JWT.
+    """
+    return usuario

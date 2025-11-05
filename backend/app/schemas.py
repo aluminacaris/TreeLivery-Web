@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Any
 from uuid import UUID
 from decimal import Decimal
@@ -78,10 +78,15 @@ class UsuarioCreate(UsuarioBase):
 
 class UsuarioOut(UsuarioBase):
     usuario_id: UUID
+    nome: str
+    email: EmailStr
     criado_em: datetime
-
+    tipo_dieta: Optional[str]
+    restricoes: Optional[List[str]]
+    seletividade: bool
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str

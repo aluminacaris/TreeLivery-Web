@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
@@ -7,14 +7,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        esc: "#091108",
-        marro: "#4C361A",
-        verdeclaro: "#B6D38D",
-        marelo: "#F6CA83",
-        cinza: "#9CAFB7",
-        fundo: "#FDFFF9",
+        primario: "#2E7D32",     // verde escuro principal
+        secundario: "#A5D6A7",   // verde claro (fundo/acentos)
+        destaque: "#FDD835",     // amarelo destaque
+        claro: "#FFFDE7",        // bege bem claro
+        texto: "#3E2723",        // marrom escuro (para legibilidade)
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
     },
   },
   plugins: [],
-}
+};
