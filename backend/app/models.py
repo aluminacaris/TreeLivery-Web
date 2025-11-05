@@ -60,4 +60,7 @@ class Usuario(Base):
     email = sa.Column(sa.String(120), unique=True, nullable=False)
     senha_hash = sa.Column(sa.String(255), nullable=False)
     criado_em = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
+    tipo_dieta = sa.Column(sa.String(50), nullable=True)  # Ex: vegetariano, vegano, etc.
+    restricoes = sa.Column(sa.ARRAY(sa.String), nullable=True)  # Ex: ["gluten", "lactose"]
+    seletividade = sa.Column(sa.Boolean, default=False)  # Indica se o usuário é seletivo com alimentos
     pedidos = sa.orm.relationship("Pedido", backref="usuario")

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from . import models, schemas
 from uuid import UUID
+from .auth import gerar_hash
 
 async def get_restaurants(db: AsyncSession, limit: int = 50):
     q = await db.execute(select(models.Restaurante).where(models.Restaurante.ativo==True).limit(limit))
@@ -96,3 +97,24 @@ async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
     pedido_com_itens = result.scalar_one()
 
     return pedido_com_itens
+
+async def criar_usuario(db: AsyncSession, usuario: schemas.UsuarioCreate):
+        # Verifica se já existe o email
+    result = await db.execute(sa.select(models.Usuario).where(models.Usuario.email == usuario.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+
+    novo_usuario = models.Usuario(
+        nome=usuario.nome,
+        email=usuario.email,
+        senha_hash=gerar_hash(usuario.senha),
+        tipo_dieta=usuario.tipo_dieta,
+        restricoes=usuario.restricoes,
+        seletividade=usuario.seletividade
+    )
+    
+    db.add(novo_usuario)
+    
+    await db.commit()
+    await db.refresh(novo_usuario)
+    return novo_usuario

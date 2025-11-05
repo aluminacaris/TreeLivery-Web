@@ -60,21 +60,28 @@ class PedidoOut(BaseModel):
     total: Decimal
     itens: List[ItemPedidoOut]
     
-class UsuarioCreate(BaseModel):
+class UsuarioBase(BaseModel):
     nome: str
+    email: str
+    tipo_dieta: Optional[str] = None
+    restricoes: Optional[List[str]] = None
+    seletividade: Optional[bool] = False
+
+
+class UsuarioCreate(UsuarioBase):
+    nome: str   
     email: str
     senha: str
+    tipo_dieta: Optional[str] = None
+    restricoes: Optional[List[str]] = None
+    seletividade: Optional[bool] = False
 
-
-class UsuarioOut(BaseModel):
+class UsuarioOut(UsuarioBase):
     usuario_id: UUID
-    nome: str
-    email: str
     criado_em: datetime
-    
+
     class Config:
         orm_mode = True
-
 
 class Token(BaseModel):
     access_token: str
