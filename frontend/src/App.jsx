@@ -11,7 +11,6 @@ import Cadastro from "./pages/Cadastro";
 import Restaurantes from "./pages/Restaurantes";
 import LoginRestaurante from "./pages/LoginRestaurante";
 import CadastroRestaurante from "./pages/CadastroRestaurante";
-import ProtectedRouteRestaurante from "./components/ProtectedRouteRestaurante"; // 👈 novo
 
 export default function App() {
   return (
@@ -35,14 +34,9 @@ export default function App() {
               </Route>
               
               {/* Protegido - restaurante logado */}
-              <Route
-                path="/restaurantes-admin"
-                element={
-                  <ProtectedRouteRestaurante>
-                    <Restaurantes />
-                  </ProtectedRouteRestaurante>
-                }
-              />
+              <Route element={<Layout />}> 
+                <Route path="/restaurantes-admin" element={<Restaurantes />} />
+              </Route>
             </Routes>
           </CartProvider>
         </AuthRestauranteProvider>

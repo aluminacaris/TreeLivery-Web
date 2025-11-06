@@ -18,7 +18,7 @@ export default function LoginRestaurante() {
 
     const sucesso = await loginRestaurante(email, senha);
         if (sucesso) {
-            alert("Login realizado com sucesso!");
+            
             navigate("/restaurantes-admin");
         } else {
             setErro("Email ou senha inválidos.");

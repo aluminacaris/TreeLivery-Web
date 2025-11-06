@@ -64,6 +64,17 @@ export default function Login() {
             Cadastre-se
           </button>
         </p>
+
+         <div className="text-center mt-4">
+          <button
+            type="button"
+            onClick={() => navigate("/login-restaurante")}
+            className="text-sm text-gray-500 hover:text-primario"
+          >
+            Fazer login como restaurante
+          </button>
+        </div>
+
       </form>
     </div>
   );
