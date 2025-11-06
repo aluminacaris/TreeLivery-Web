@@ -188,7 +188,7 @@ export default function Cadastro() {
 
         <button
           type="submit"
-          className="w-full bg-secundario text-esc font-semibold py-2 rounded-lg hover:bg-destaque transition"
+          className="w-full bg-primario text-claro font-semibold py-2 rounded-lg hover:text-texto hover:bg-destaque transition"
         >
           Cadastrar
         </button>

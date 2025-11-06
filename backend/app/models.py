@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from .database import Base
 import uuid
 from sqlalchemy.sql import func
+from datetime import datetime, timezone
 
 # type: ignore
 class Restaurante(Base):
@@ -18,6 +19,10 @@ class Restaurante(Base):
     taxa_entrega_base = sa.Column(sa.Numeric(10,2), default=0)
     endereco = sa.Column(JSONB, nullable=False)
     ativo = sa.Column(sa.Boolean, default=True)
+
+    email = sa.Column(sa.String, unique=True, nullable=False)
+    senha_hash = sa.Column(sa.String, nullable=False)
+    criado_em = sa.Column(sa.DateTime, default=func.now())
 
 class Prato(Base):
     __tablename__ = "pratos"

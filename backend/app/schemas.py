@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Any
 from uuid import UUID
@@ -16,16 +16,34 @@ class Endereco(BaseModel):
 class RestauranteCreate(BaseModel):
     nome_fantasia: str
     razao_social: str
+    email: str
+    senha: str
     descricao: Optional[str]
     telefone: Optional[str]
     tempo_medio_entrega: Optional[int]
     taxa_entrega_base: Optional[Decimal]
     endereco: Endereco
 
-class RestauranteOut(RestauranteCreate):
+class RestauranteOut(BaseModel):
     restaurante_id: UUID
+    nome_fantasia: str
+    razao_social: str
+    email: str
+    descricao: Optional[str]
+    telefone: Optional[str]
+    tempo_medio_entrega: Optional[int]
+    taxa_entrega_base: Optional[Decimal]
     avaliacao_media: Optional[Decimal]
     ativo: bool
+    endereco: Endereco  # ← ADICIONAR
+    criado_em: datetime  # ← ADICIONAR
+
+    class Config:
+        from_attributes = True
+                
+class RestauranteLogin(BaseModel):
+    email: str
+    senha: str
 
 class PratoCreate(BaseModel):
     nome: str

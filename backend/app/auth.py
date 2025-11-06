@@ -17,7 +17,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Para extrair o token do header Authorization
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
-
+oauth2_restaurante = OAuth2PasswordBearer(tokenUrl="/restaurantes/login")
 
 def gerar_hash(senha: str) -> str:
     if not isinstance(senha, str):
@@ -64,3 +64,26 @@ async def obter_usuario_atual(
     if usuario is None:
         raise credenciais_invalidas
     return usuario
+
+async def get_current_user_restaurante(
+    token: str = Depends(oauth2_restaurante),
+    db: AsyncSession = Depends(get_db)
+):
+    cred_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token inválido ou expirado.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise cred_exception
+    except JWTError:
+        raise cred_exception
+
+    result = await db.execute(sa.select(models.Restaurante).where(models.Restaurante.email == email))
+    restaurante = result.scalar_one_or_none()
+    if restaurante is None:
+        raise cred_exception
+    return restaurante

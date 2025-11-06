@@ -1,4 +1,5 @@
 # type: ignore
+from fastapi import HTTPException
 from sqlalchemy import select
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,20 +16,20 @@ async def get_restaurant(db: AsyncSession, restaurante_id: UUID):
     q = await db.execute(select(models.Restaurante).where(models.Restaurante.restaurante_id==restaurante_id))
     return q.scalar_one_or_none() #retorna 1 ou nenhum resultado
 
-async def create_restaurant(db: AsyncSession, rest: schemas.RestauranteCreate):
-    obj = models.Restaurante( # mapeia schema p/ modelo
-        nome_fantasia=rest.nome_fantasia,
-        razao_social=rest.razao_social,
-        descricao=rest.descricao,
-        telefone=rest.telefone,
-        tempo_medio_entrega=rest.tempo_medio_entrega,
-        taxa_entrega_base=rest.taxa_entrega_base,
-        endereco=rest.endereco.dict() #converte pydantic p/ dict (JSONB
-    )   
-    db.add(obj) #adiciona o obj a sessao
-    await db.commit() #commita as mudanças
-    await db.refresh(obj) #atualiza o obj com dados do db (ex: pk gerada)
-    return obj #retorna o obj criado
+# async def create_restaurant(db: AsyncSession, rest: schemas.RestauranteCreate):
+#     obj = models.Restaurante( # mapeia schema p/ modelo
+#         nome_fantasia=rest.nome_fantasia,
+#         razao_social=rest.razao_social,
+#         descricao=rest.descricao,
+#         telefone=rest.telefone,
+#         tempo_medio_entrega=rest.tempo_medio_entrega,
+#         taxa_entrega_base=rest.taxa_entrega_base,
+#         endereco=rest.endereco.dict() #converte pydantic p/ dict (JSONB
+#     )   
+#     db.add(obj) #adiciona o obj a sessao
+#     await db.commit() #commita as mudanças
+#     await db.refresh(obj) #atualiza o obj com dados do db (ex: pk gerada)
+#     return obj #retorna o obj criado
 
 async def get_menu(db: AsyncSession, restaurante_id: UUID): #mostra os pratos disponiveis de um restaurante
     q = await db.execute(select(models.Prato).where(models.Prato.restaurante_id==restaurante_id, models.Prato.disponivel==True))
