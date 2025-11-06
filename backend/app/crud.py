@@ -16,20 +16,33 @@ async def get_restaurant(db: AsyncSession, restaurante_id: UUID):
     q = await db.execute(select(models.Restaurante).where(models.Restaurante.restaurante_id==restaurante_id))
     return q.scalar_one_or_none() #retorna 1 ou nenhum resultado
 
-# async def create_restaurant(db: AsyncSession, rest: schemas.RestauranteCreate):
-#     obj = models.Restaurante( # mapeia schema p/ modelo
-#         nome_fantasia=rest.nome_fantasia,
-#         razao_social=rest.razao_social,
-#         descricao=rest.descricao,
-#         telefone=rest.telefone,
-#         tempo_medio_entrega=rest.tempo_medio_entrega,
-#         taxa_entrega_base=rest.taxa_entrega_base,
-#         endereco=rest.endereco.dict() #converte pydantic p/ dict (JSONB
-#     )   
-#     db.add(obj) #adiciona o obj a sessao
-#     await db.commit() #commita as mudanças
-#     await db.refresh(obj) #atualiza o obj com dados do db (ex: pk gerada)
-#     return obj #retorna o obj criado
+async def get_restaurant_by_email(db: AsyncSession, email: str):
+    q = await db.execute(select(models.Restaurante).where(models.Restaurante.email == email))
+    return q.scalar_one_or_none()
+
+async def create_restaurant(db: AsyncSession, payload: schemas.RestauranteCreate):
+    # Verifica se o email já existe
+    existing_rest = await get_restaurant_by_email(db, payload.email)
+    if existing_rest:
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+
+    restaurante = models.Restaurante(
+        nome_fantasia=payload.nome_fantasia,
+        razao_social=payload.razao_social,
+        email=payload.email,
+        senha_hash=gerar_hash(payload.senha),
+        descricao=payload.descricao,
+        telefone=payload.telefone,
+        tempo_medio_entrega=payload.tempo_medio_entrega,
+        taxa_entrega_base=payload.taxa_entrega_base,
+        endereco=payload.endereco.dict(),
+        ativo=True,
+    )
+
+    db.add(restaurante)
+    await db.commit()
+    await db.refresh(restaurante)
+    return restaurante
 
 async def get_menu(db: AsyncSession, restaurante_id: UUID): #mostra os pratos disponiveis de um restaurante
     q = await db.execute(select(models.Prato).where(models.Prato.restaurante_id==restaurante_id, models.Prato.disponivel==True))
