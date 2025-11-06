@@ -23,6 +23,7 @@ class Restaurante(Base):
     email = sa.Column(sa.String, unique=True, nullable=False)
     senha_hash = sa.Column(sa.String, nullable=False)
     criado_em = sa.Column(sa.DateTime, default=func.now())
+    
 
 class Prato(Base):
     __tablename__ = "pratos"

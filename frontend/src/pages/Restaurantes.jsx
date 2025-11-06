@@ -1,134 +1,85 @@
+// src/pages/RestaurantesAdmin.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useAuthRestaurante } from "../context/AuthRestauranteContext";
 
-export default function Restaurantes() {
-  const [restaurantes, setRestaurantes] = useState([]);
-  const [form, setForm] = useState({
-    nome_fantasia: "",
-    descricao: "",
-    tempo_medio_entrega: "",
-    taxa_entrega_base: "",
-  });
+export default function RestaurantesAdmin(){
+  const { restaurante, loading } = useAuthRestaurante();
+  const [pratos, setPratos] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ nome:"", descricao:"", preco:"", categoria:"" });
 
-  // busca os restaurantes já cadastrados
   useEffect(() => {
-    buscarRestaurantes();
-  }, []);
+    if (restaurante) fetchPratos();
+  }, [restaurante]);
 
-  async function buscarRestaurantes() {
-    try {
-      const res = await axios.get("http://localhost:8000/restaurantes/");
-      setRestaurantes(res.data);
-    } catch (err) {
-      console.error("Erro ao carregar restaurantes:", err);
+  async function fetchPratos(){
+    try{
+      const res = await axios.get(`http://localhost:8000/restaurantes/${restaurante.restaurante_id}/menu`);
+      setPratos(res.data);
+    } catch(err){
+      console.error("Erro ao buscar pratos:", err);
     }
   }
 
-  async function handleSubmit(e) {
+  async function submitPrato(e){
     e.preventDefault();
-    try {
-      const payload = {
-        nome_fantasia: form.nome_fantasia,
-        descricao: form.descricao,
-        tempo_medio_entrega: Number(form.tempo_medio_entrega),
-        taxa_entrega_base: Number(form.taxa_entrega_base),
-      };
-
-      const res = await axios.post("http://localhost:8000/restaurantes/", payload);
-      console.log("✅ Restaurante criado:", res.data);
-      setForm({
-        nome_fantasia: "",
-        descricao: "",
-        tempo_medio_entrega: "",
-        taxa_entrega_base: "",
-      });
-      buscarRestaurantes();
-    } catch (err) {
-      console.error("❌ Erro ao criar restaurante:", err);
-      alert("Erro ao criar restaurante");
+    try{
+      const payload = { ...form, preco: Number(form.preco) };
+      await axios.post(`http://localhost:8000/restaurantes/${restaurante.restaurante_id}/menu`, payload);
+      setForm({ nome:"", descricao:"", preco:"", categoria:"" });
+      setShowForm(false);
+      fetchPratos();
+      alert("Prato criado!");
+    } catch(err){
+      console.error(err);
+      alert("Erro ao criar prato");
     }
   }
+
+  if (loading) return <div className="p-8">Carregando...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <h2 className="text-3xl font-bold mb-6 text-primario">
-        🍴 Cadastro de Restaurantes
-      </h2>
+    <div className="max-w-4xl mx-auto p-6">
+      <h2 className="text-2xl font-bold text-primario mb-4">Painel do Restaurante</h2>
 
-      {/* Formulário */}
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1">Nome Fantasia</label>
-            <input
-              type="text"
-              value={form.nome_fantasia}
-              onChange={(e) => setForm({ ...form, nome_fantasia: e.target.value })}
-              className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-primario"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1">Tempo médio de entrega (min)</label>
-            <input
-              type="number"
-              value={form.tempo_medio_entrega}
-              onChange={(e) => setForm({ ...form, tempo_medio_entrega: e.target.value })}
-              className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-primario"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1">Taxa base de entrega (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={form.taxa_entrega_base}
-              onChange={(e) => setForm({ ...form, taxa_entrega_base: e.target.value })}
-              className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-primario"
-              required
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold mb-1">Descrição</label>
-            <textarea
-              value={form.descricao}
-              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-              className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-primario"
-              rows={3}
-              required
-            />
-          </div>
+      {restaurante ? (
+        <div className="bg-white p-4 rounded shadow mb-4">
+          <h3 className="font-semibold">{restaurante.nome_fantasia}</h3>
+          <p className="text-sm text-gray-600">{restaurante.descricao}</p>
         </div>
-
-        <button
-          type="submit"
-          className="mt-4 bg-primario text-white px-5 py-2 rounded hover:bg-destaque transition"
-        >
-          Cadastrar Restaurante
-        </button>
-      </form>
-
-      {/* Lista */}
-      <h3 className="text-2xl font-semibold mb-3 text-primario">Restaurantes cadastrados</h3>
-      {restaurantes.length === 0 ? (
-        <p className="text-gray-500">Nenhum restaurante cadastrado ainda.</p>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {restaurantes.map((r) => (
-            <div key={r.restaurante_id} className="bg-white p-4 rounded shadow hover:shadow-lg transition">
-              <h4 className="font-semibold text-lg">{r.nome_fantasia}</h4>
-              <p className="text-gray-600 text-sm mb-1">{r.descricao}</p>
-              <p className="text-sm text-gray-700">
-                Entrega: {r.tempo_medio_entrega} min • Taxa: R$ {r.taxa_entrega_base}
-              </p>
-            </div>
-          ))}
-        </div>
+        <div>Não autenticado.</div>
       )}
+
+      <div className="bg-white p-4 rounded shadow mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="font-semibold">Cardápio</h4>
+          <button onClick={()=>setShowForm(s=>!s)} className="bg-primario text-white px-3 py-1 rounded">{showForm ? "Fechar" : "+ Novo prato"}</button>
+        </div>
+
+        {showForm && (
+          <form onSubmit={submitPrato} className="mb-4">
+            <input required placeholder="Nome" value={form.nome} onChange={e=>setForm({...form, nome:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+            <textarea placeholder="Descrição" value={form.descricao} onChange={e=>setForm({...form, descricao:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+            <input required type="number" step="0.01" placeholder="Preço" value={form.preco} onChange={e=>setForm({...form, preco:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+            <input placeholder="Categoria" value={form.categoria} onChange={e=>setForm({...form, categoria:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+            <div className="flex gap-2">
+              <button type="submit" className="bg-primario text-white px-4 py-2 rounded">Salvar</button>
+            </div>
+          </form>
+        )}
+
+        {pratos.length === 0 ? <p>Nenhum prato</p> : pratos.map(p=>(
+          <div key={p.prato_id} className="border rounded p-3 mb-2 flex justify-between items-center">
+            <div>
+              <div className="font-semibold">{p.nome}</div>
+              <div className="text-sm text-gray-600">{p.descricao}</div>
+            </div>
+            <div>R$ {p.preco}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

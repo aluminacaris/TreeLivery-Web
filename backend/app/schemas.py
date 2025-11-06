@@ -33,11 +33,10 @@ class RestauranteOut(BaseModel):
     telefone: Optional[str]
     tempo_medio_entrega: Optional[int]
     taxa_entrega_base: Optional[Decimal]
-    avaliacao_media: Optional[Decimal]
     ativo: bool
-    endereco: Endereco  # ← ADICIONAR
-    criado_em: datetime  # ← ADICIONAR
-
+    endereco: Endereco  
+    criado_em: datetime 
+    
     class Config:
         from_attributes = True
                 
