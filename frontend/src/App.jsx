@@ -4,6 +4,7 @@ import { CartProvider } from "./context/CartContext";
 import { AuthRestauranteProvider } from "./context/AuthRestauranteContext";
 
 import Layout from "./layout/Layout";
+import LayoutRestaurante from "./layout/LayoutRestaurante";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Menu from "./pages/Menu";
@@ -34,7 +35,7 @@ export default function App() {
               </Route>
               
               {/* Protegido - restaurante logado */}
-              <Route element={<Layout />}> 
+              <Route element={<LayoutRestaurante protegidoRestaurante />}>
                 <Route path="/restaurantes-admin" element={<Restaurantes />} />
               </Route>
             </Routes>
