@@ -48,8 +48,8 @@ class PratoCreate(BaseModel):
     nome: str
     descricao: Optional[str]
     preco: Decimal
-    categoria: Optional[str]
-
+    restricoes: list[str] = []
+    
 class PratoOut(PratoCreate):
     prato_id: UUID
     restaurante_id: UUID
@@ -83,7 +83,6 @@ class UsuarioBase(BaseModel):
     tipo_dieta: Optional[str] = None
     restricoes: Optional[List[str]] = None
     seletividade: Optional[bool] = False
-
 
 class UsuarioCreate(UsuarioBase):
     nome: str   

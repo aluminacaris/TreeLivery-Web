@@ -59,7 +59,7 @@ async def create_prato(db: AsyncSession, restaurante_id: UUID, payload: schemas.
         nome=payload.nome,
         descricao=payload.descricao,
         preco=payload.preco,
-        categoria=payload.categoria,
+        restricoes=payload.restricoes,
         disponivel=True
     )
     db.add(prato)

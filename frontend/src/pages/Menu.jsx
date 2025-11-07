@@ -58,6 +58,7 @@ export default function Menu() {
             <h3 className="font-semibold text-primario">{p.nome}</h3>
             <p className="text-gray-600">{p.descricao}</p>
             <p className="mt-2 font-bold text-texto">R$ {p.preco}</p>
+            <p className="mt-2 font-bold text-texto">Possui: {p.restricoes.join(", ")}</p>
             <button
               onClick={() => addToCart(p)}
               className="mt-2 bg-primario text-white px-3 py-1 rounded hover:bg-destaque hover:text-texto transition"

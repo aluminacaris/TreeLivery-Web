@@ -7,7 +7,17 @@ export default function RestaurantesAdmin(){
   const { restaurante, loading } = useAuthRestaurante();
   const [pratos, setPratos] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ nome:"", descricao:"", preco:"", categoria:"" });
+  const [form, setForm] = useState({ nome:"", descricao:"", preco:"", restricoes:[] });
+
+    const restricoesDisponiveis = [
+    "glúten",
+    "lactose",
+    "castanhas",
+    "ovo",
+    "mariscos",
+    "soja",
+    "açúcar",
+    ];
 
   useEffect(() => {
     if (restaurante) fetchPratos();
@@ -23,11 +33,14 @@ export default function RestaurantesAdmin(){
   }
 
   async function submitPrato(e){
+
+  
+
     e.preventDefault();
     try{
       const payload = { ...form, preco: Number(form.preco) };
       await axios.post(`http://localhost:8000/restaurantes/${restaurante.restaurante_id}/menu`, payload);
-      setForm({ nome:"", descricao:"", preco:"", categoria:"" });
+      setForm({ nome:"", descricao:"", preco:"", restricoes:[] });
       setShowForm(false);
       fetchPratos();
       alert("Prato criado!");
@@ -61,9 +74,32 @@ export default function RestaurantesAdmin(){
         {showForm && (
           <form onSubmit={submitPrato} className="mb-4">
             <input required placeholder="Nome" value={form.nome} onChange={e=>setForm({...form, nome:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+
             <textarea placeholder="Descrição" value={form.descricao} onChange={e=>setForm({...form, descricao:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+
             <input required type="number" step="0.01" placeholder="Preço" value={form.preco} onChange={e=>setForm({...form, preco:e.target.value})} className="w-full p-2 border rounded mb-2"/>
-            <input placeholder="Categoria" value={form.categoria} onChange={e=>setForm({...form, categoria:e.target.value})} className="w-full p-2 border rounded mb-2"/>
+
+            <div className="mb-3">
+              <p className="font-semibold mb-1">Restrições:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {restricoesDisponiveis.map((r) => (
+                  <label key={r} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.restricoes?.includes(r)}
+                      onChange={(e) => {
+                        const novaLista = e.target.checked
+                          ? [...(form.restricoes || []), r]
+                          : form.restricoes.filter((x) => x !== r);
+                        setForm({ ...form, restricoes: novaLista });
+                      }}
+                    />
+                    {r}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button type="submit" className="bg-primario text-white px-4 py-2 rounded">Salvar</button>
             </div>

@@ -32,7 +32,7 @@ class Prato(Base):
     nome = sa.Column(sa.String(100), nullable=False)
     descricao = sa.Column(sa.Text)
     preco = sa.Column(sa.Numeric(10,2), nullable=False)
-    categoria = sa.Column(sa.String(50))
+    restricoes = sa.Column(sa.ARRAY(sa.String), nullable=True)   
     disponivel = sa.Column(sa.Boolean, default=True)
     created_at = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
 
