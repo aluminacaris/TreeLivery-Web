@@ -9,15 +9,31 @@ export default function RestaurantesAdmin(){
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nome:"", descricao:"", preco:"", restricoes:[] });
 
-    const restricoesDisponiveis = [
-    "glúten",
-    "lactose",
-    "castanhas",
-    "ovo",
-    "mariscos",
-    "soja",
-    "açúcar",
-    ];
+  const restricoesDisponiveis = [
+  "glúten",
+  "lactose",
+  "castanhas",
+  "ovo",
+  "mariscos",
+  "soja",
+  "açúcar",
+  ];
+
+  const [novaRestricao, setNovaRestricao] = useState("");
+
+  function adicionarRestricao() {
+  if (!novaRestricao.trim()) return; // ignora vazio
+
+  // evita duplicatas
+  if (form.restricoes.includes(novaRestricao.trim().toLowerCase())) return;
+
+  setForm((prev) => ({
+      ...prev,
+      restricoes: [...prev.restricoes, novaRestricao.trim().toLowerCase()],
+  }));
+
+  setNovaRestricao(""); // limpa o input
+  }
 
   useEffect(() => {
     if (restaurante) fetchPratos();
@@ -33,8 +49,6 @@ export default function RestaurantesAdmin(){
   }
 
   async function submitPrato(e){
-
-  
 
     e.preventDefault();
     try{
@@ -100,6 +114,34 @@ export default function RestaurantesAdmin(){
               </div>
             </div>
 
+            <div className="flex mb-3">
+              <input
+                type="text"
+                placeholder="Outra restrição..."
+                value={novaRestricao}
+                onChange={(e) => setNovaRestricao(e.target.value)}
+                className="flex-1 p-2 border rounded-l focus:outline-none focus:ring-2 focus:ring-primario"
+              />
+
+              <button
+                type="button"
+                onClick={adicionarRestricao}
+                aria-label="Adicionar restrição"
+                className="bg-primario text-white px-4 rounded-r font-bold text-lg hover:bg-destaque active:scale-95 transition-transform"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Mostrar restrições selecionadas */}
+            {form.restricoes.length > 0 && (
+              <ul className="text-sm text-texto mb-3">
+                {form.restricoes.map((r, i) => (
+                  <li key={i}>• {r}</li>
+                ))}
+              </ul>
+            )}
+
             <div className="flex gap-2">
               <button type="submit" className="bg-primario text-white px-4 py-2 rounded">Salvar</button>
             </div>
@@ -111,6 +153,7 @@ export default function RestaurantesAdmin(){
             <div>
               <div className="font-semibold">{p.nome}</div>
               <div className="text-sm text-gray-600">{p.descricao}</div>
+              <div className="text-sm text-gray-600">Contém: {p.restricoes.join(", ")}</div>
             </div>
             <div>R$ {p.preco}</div>
           </div>
