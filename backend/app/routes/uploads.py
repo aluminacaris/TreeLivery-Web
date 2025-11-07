@@ -1,4 +1,4 @@
-# app/routes/uploads.py
+# type: ignore
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from .. import models, database

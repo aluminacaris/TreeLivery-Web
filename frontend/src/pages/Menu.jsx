@@ -54,7 +54,19 @@ export default function Menu() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {pratos.map((p) => (
-          <div key={p.prato_id} className="bg-white p-4 rounded shadow hover:shadow-md transition">
+          <div key={p.prato_id} className="bg-white p-6 rounded-md shadow hover:shadow-md transition">
+            {p.imagem_url ? (
+              <img
+                src={`http://localhost:8000${p.imagem_url}`}
+                alt={p.nome}
+                className="h-40 w-full object-cover rounded-md"
+              />
+            ) : (
+              <div className="h-40 w-full bg-gray-100 flex items-center justify-center text-gray-400 italic">
+                sem imagem
+              </div>
+            )}
+
             <h3 className="font-semibold text-primario">{p.nome}</h3>
             <p className="text-gray-600">{p.descricao}</p>
             <p className="mt-2 font-bold text-texto">R$ {p.preco}</p>
