@@ -6,20 +6,26 @@ export function CartProvider({ children }){ //fornece contexto p/ aplicação //
     const[cartItems, setCartItems] = useState([])
 
     // add item ou soma se ja existir
-    function addToCart(prato){
-        setCartItems(prev => {
-            const existing = prev.find(p => p.prato_id === prato.prato_id)
-            if (existing){
-                return prev.map(p =>
-                    p.prato_id === prato.prato_id? { ...p, quantity: p.quantity + 1 } : p
-                )
-            }
-            return [...prev, { ...prato, quantity: 1 }]
-        })
+function addToCart(item, delta = 1) {
+  setCartItems((prev) => {
+    const existing = prev.find((p) => p.prato_id === item.prato_id);
+    if (existing) {
+      const updated = prev
+        .map((p) =>
+          p.prato_id === item.prato_id
+            ? { ...p, quantity: Math.max(1, p.quantity + delta) }
+            : p
+        )
+        .filter((p) => p.quantity > 0);
+      return updated;
     }
+    if (delta > 0) return [...prev, { ...item, quantity: 1 }];
+    return prev;
+  });
+}
 
-    function removeFromCart(pratoId){
-        setCartItems(prev => prev.filter(p => p.prato_id !== pratoId))
+    function removeFromCart(pratoId) {
+    setCartItems((prev) => prev.filter((p) => p.prato_id !== pratoId));
     }
 
     function clearCart(){
