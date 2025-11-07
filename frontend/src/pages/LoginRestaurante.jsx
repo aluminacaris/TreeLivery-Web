@@ -34,7 +34,7 @@ export default function LoginRestaurante() {
         className="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm border border-secundario"
       >
         <h1 className="text-2xl font-bold text-center mb-6 text-primario">
-          Entrar como Restaurante 🍽️
+          Entrar como Restaurante 
         </h1>
 
         {erro && <p className="text-red-500 mb-3 text-center">{erro}</p>}
@@ -82,7 +82,7 @@ export default function LoginRestaurante() {
             onClick={() => navigate("/login")}
             className="text-sm text-gray-500 hover:text-primario"
           >
-            Sou cliente → Fazer login como usuário
+            Fazer login como usuário
           </button>
         </div>
       </form>

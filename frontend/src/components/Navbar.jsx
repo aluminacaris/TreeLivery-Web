@@ -16,7 +16,7 @@ export default function Navbar() {
         className="font-extrabold text-xl cursor-pointer hover:opacity-80 transition"
         onClick={() => navigate("/")}
       >
-        🍽️ Treelivery
+        Treelivery
       </h1>
 
       {usuario ? (

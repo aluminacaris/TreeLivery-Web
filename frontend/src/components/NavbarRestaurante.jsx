@@ -16,7 +16,7 @@ export default function NavbarRestaurante() {
         className="font-extrabold text-xl cursor-pointer hover:opacity-80 transition"
         onClick={() => navigate("/")}
       >
-        🍽️ Treelivery
+        Treelivery
       </h1>
 
       {restaurante ? (
