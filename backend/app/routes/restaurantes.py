@@ -1,16 +1,21 @@
 # type: ignore
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from .. import crud, schemas, crud, models, auth_restaurante
+from .. import crud, schemas, crud, models, auth_restaurante, database
 from ..database import get_db
 from uuid import UUID
 import sqlalchemy as sa
 from datetime import datetime
+import os
+import shutil
 
 
 router = APIRouter(prefix="/restaurantes", tags=["restaurantes"]) #todas as rotas começam com restaurantes
 #tags ajudam na organização da documentação automática (Swagger UI) 
+
+UPLOAD_DIR = os.path.join("app", "static", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # 🟢 Rota para pegar restaurante logado
 @router.get("/me", response_model=schemas.RestauranteOut)
@@ -71,3 +76,17 @@ async def remover_prato(prato_id: UUID, db: AsyncSession = Depends(get_db)):
     if not sucesso:
         raise HTTPException(status_code=404, detail="Prato não encontrado")
     return {"ok": True}
+
+
+# @router.post("/upload-imagem")
+# async def upload_imagem(file: UploadFile = File(...)):
+#     try:
+#         os.makedirs(UPLOAD_DIR, exist_ok=True)
+#         file_path = os.path.join(UPLOAD_DIR, file.filename)
+        
+#         with open(file_path, "wb") as buffer:
+#             shutil.copyfileobj(file.file, buffer)
+
+#         return {"url": f"http://localhost:8000/static/uploads/{file.filename}"}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Erro ao salvar imagem: {e}")

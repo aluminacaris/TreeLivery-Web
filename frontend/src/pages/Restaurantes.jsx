@@ -84,21 +84,53 @@ export default function RestaurantesAdmin(){
     }
   }
 
-  async function submitPrato(e){
-
-    e.preventDefault();
-    try{
-      const payload = { ...form, preco: Number(form.preco) };
-      await axios.post(`http://localhost:8000/restaurantes/${restaurante.restaurante_id}/menu`, payload);
-      setForm({ nome:"", descricao:"", preco:"", restricoes:[] });
-      setShowForm(false);
-      fetchPratos();
-      alert("Prato criado!");
-    } catch(err){
-      console.error(err);
-      alert("Erro ao criar prato");
+async function submitPrato(e) {
+  e.preventDefault();
+  try {
+    const token = localStorage.getItem("restaurante_token");
+    if (!token) {
+      alert("Token não encontrado, faça login novamente.");
+      return;
     }
+
+    const payload = { ...form, preco: parseFloat(form.preco) };
+
+    // 1️⃣ Cria o prato
+    const res = await axios.post(
+      `http://localhost:8000/restaurantes/${restaurante.restaurante_id}/menu`,
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const pratoCriado = res.data;
+
+    // 2️⃣ Faz upload da imagem se tiver
+    if (form.imagem) {
+      const formData = new FormData();
+      formData.append("file", form.imagem);
+
+      await axios.post(
+        `http://localhost:8000/uploads/prato/${pratoCriado.prato_id}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    }
+
+    // 3️⃣ Limpa o formulário e atualiza lista
+    setForm({ nome: "", descricao: "", preco: "", categoria: "", imagem: null });
+    setShowForm(false);
+    fetchPratos();
+    alert("✅ Prato criado com sucesso!");
+  } catch (err) {
+    console.error("Erro ao criar prato:", err);
+    alert("❌ Erro ao criar prato");
   }
+}
 
   if (loading) return <div className="p-8">Carregando...</div>;
 
@@ -178,6 +210,16 @@ export default function RestaurantesAdmin(){
               </ul>
             )}
 
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Imagem do prato:
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setForm({ ...form, imagem: e.target.files[0] })}
+              className="w-full p-2 border rounded mb-3"
+            />
+
             <div className="flex gap-2">
               <button type="submit" className="bg-primario text-white px-4 py-2 rounded">Salvar</button>
             </div>
@@ -228,6 +270,18 @@ export default function RestaurantesAdmin(){
       ) : (
         <>
           <div>
+       {/* 🖼️ Imagem do prato */}
+        {p.imagem_url ? (
+          <img
+            src={`http://localhost:8000${p.imagem_url}`}
+            alt={p.nome}
+            className="h-40 w-full object-cover"
+          />
+        ) : (
+          <div className="h-40 w-full bg-gray-100 flex items-center justify-center text-gray-400 italic">
+            sem imagem
+          </div>
+        )}
             <div className="font-semibold">{p.nome}</div>
             <div className="text-sm text-gray-600">{p.descricao}</div>
             <div className="text-sm text-gray-600">Contém: {p.restricoes.join(", ")}</div>

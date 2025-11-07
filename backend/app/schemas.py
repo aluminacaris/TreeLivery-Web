@@ -49,6 +49,7 @@ class PratoCreate(BaseModel):
     descricao: Optional[str]
     preco: Decimal
     restricoes: list[str] = []
+    imagem_url: Optional[str] = None
     
 class PratoOut(PratoCreate):
     prato_id: UUID

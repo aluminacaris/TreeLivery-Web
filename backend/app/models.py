@@ -34,6 +34,7 @@ class Prato(Base):
     preco = sa.Column(sa.Numeric(10,2), nullable=False)
     restricoes = sa.Column(sa.ARRAY(sa.String), nullable=True)   
     disponivel = sa.Column(sa.Boolean, default=True)
+    imagem_url = sa.Column(sa.String, nullable=True)
     created_at = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
 
 # relacionamento 1--n com itemPedido
