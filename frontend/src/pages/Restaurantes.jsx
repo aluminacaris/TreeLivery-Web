@@ -8,6 +8,8 @@ export default function RestaurantesAdmin(){
   const [pratos, setPratos] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nome:"", descricao:"", preco:"", restricoes:[] });
+  const [editando, setEditando] = useState(null);
+
 
   const restricoesDisponiveis = [
   "glúten",
@@ -33,7 +35,41 @@ export default function RestaurantesAdmin(){
   }));
 
   setNovaRestricao(""); // limpa o input
+}
+
+  async function updatePrato(pratoId) {
+  try {
+    const payload = {
+      ...form,
+      preco: Number(form.preco),
+      restricoes: form.restricoes || []
+    };
+
+    await axios.put(
+      `http://localhost:8000/restaurantes/menu/${pratoId}`,
+      payload
+    );
+
+    setEditando(null);
+    setForm({ nome: "", descricao: "", preco: "", restricoes: [] });
+    fetchPratos();
+    alert("Prato atualizado!");
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao atualizar prato");
   }
+}
+
+  async function deletePrato(pratoId) {
+  if (!window.confirm("Tem certeza que deseja excluir este prato?")) return;
+
+  try {
+    await axios.delete(`http://localhost:8000/restaurantes/menu/${pratoId}`);
+    fetchPratos();
+  } catch (err) {
+    console.error("Erro ao deletar prato:", err);
+  }
+}
 
   useEffect(() => {
     if (restaurante) fetchPratos();
@@ -148,17 +184,87 @@ export default function RestaurantesAdmin(){
           </form>
         )}
 
-        {pratos.length === 0 ? <p>Nenhum prato</p> : pratos.map(p=>(
-          <div key={p.prato_id} className="border rounded p-3 mb-2 flex justify-between items-center">
-            <div>
-              <div className="font-semibold">{p.nome}</div>
-              <div className="text-sm text-gray-600">{p.descricao}</div>
-              <div className="text-sm text-gray-600">Contém: {p.restricoes.join(", ")}</div>
+{pratos.length === 0 ? (
+  <p>Nenhum prato</p>
+) : (
+  pratos.map((p) => (
+    <div
+      key={p.prato_id}
+      className="border rounded p-3 mb-2 flex justify-between items-center"
+    >
+      {editando === p.prato_id ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            updatePrato(p.prato_id);
+          }}
+          className="flex-1 flex flex-col gap-2"
+        >
+          <input
+            required
+            value={form.nome}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            className="p-2 border rounded"
+          />
+          <textarea
+            value={form.descricao}
+            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            className="p-2 border rounded"
+          />
+          <input
+            type="number"
+            step="0.01"
+            value={form.preco}
+            onChange={(e) => setForm({ ...form, preco: e.target.value })}
+            className="p-2 border rounded"
+          />
+          <button
+            type="submit"
+            className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+          >
+            Salvar
+          </button>
+        </form>
+      ) : (
+        <>
+          <div>
+            <div className="font-semibold">{p.nome}</div>
+            <div className="text-sm text-gray-600">{p.descricao}</div>
+            <div className="text-sm text-gray-600">Contém: {p.restricoes.join(", ")}</div>
+            <div className="text-sm text-gray-800">R$ {p.preco}</div>
+            <div className="text-xs text-gray-500">
+              {p.restricoes?.length
+                ? p.restricoes.join(", ")
+                : "Sem restrições"}
             </div>
-            <div>R$ {p.preco}</div>
           </div>
-        ))}
-      </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setEditando(p.prato_id);
+                setForm({
+                  nome: p.nome,
+                  descricao: p.descricao,
+                  preco: p.preco,
+                  restricoes: p.restricoes || []
+                });
+              }}
+              className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+            >
+              ✏️
+            </button>
+            <button
+              onClick={() => deletePrato(p.prato_id)}
+              className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+            >
+              🗑️
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  ))
+)}      </div>
     </div>
   );
 }

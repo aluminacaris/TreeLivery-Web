@@ -57,3 +57,17 @@ async def criar_prato(restaurante_id: UUID, payload: schemas.PratoCreate, db: As
     if not rest:
         raise HTTPException(status_code=404, detail="Restaurante não encontrado")
     return await crud.create_prato(db, restaurante_id, payload)
+
+@router.put("/menu/{prato_id}", response_model=schemas.PratoOut)
+async def atualizar_prato(prato_id: UUID, payload: schemas.PratoCreate, db: AsyncSession = Depends(get_db)):
+    prato = await crud.update_prato(db, prato_id, payload)
+    if not prato:
+        raise HTTPException(status_code=404, detail="Prato não encontrado")
+    return prato
+
+@router.delete("/menu/{prato_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remover_prato(prato_id: UUID, db: AsyncSession = Depends(get_db)):
+    sucesso = await crud.delete_prato(db, prato_id)
+    if not sucesso:
+        raise HTTPException(status_code=404, detail="Prato não encontrado")
+    return {"ok": True}

@@ -67,6 +67,33 @@ async def create_prato(db: AsyncSession, restaurante_id: UUID, payload: schemas.
     await db.refresh(prato) # atualiza com dados do banco (ex: prato_id)
     return prato
 
+async def update_prato(db: AsyncSession, prato_id: UUID, dados: schemas.PratoCreate):
+    result = await db.execute(select(models.Prato).where(models.Prato.prato_id == prato_id))
+    prato = result.scalar_one_or_none()
+
+    if not prato:
+        return None
+
+    prato.nome = dados.nome
+    prato.descricao = dados.descricao
+    prato.preco = dados.preco
+    prato.restricoes = dados.restricoes
+    await db.commit()
+    await db.refresh(prato)
+    return prato
+
+# ❌ Deletar prato
+async def delete_prato(db: AsyncSession, prato_id: UUID):
+    result = await db.execute(select(models.Prato).where(models.Prato.prato_id == prato_id))
+    prato = result.scalar_one_or_none()
+
+    if not prato:
+        return False
+
+    await db.delete(prato)
+    await db.commit()
+    return True
+
 async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
     from . import models
     
