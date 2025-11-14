@@ -36,6 +36,7 @@ async def create_restaurant(db: AsyncSession, payload: schemas.RestauranteCreate
         tempo_medio_entrega=payload.tempo_medio_entrega,
         taxa_entrega_base=payload.taxa_entrega_base,
         endereco=payload.endereco.dict(),
+        foto_perfil=payload.foto_perfil,
         ativo=True,
     )
 

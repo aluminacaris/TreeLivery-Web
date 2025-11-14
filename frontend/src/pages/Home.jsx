@@ -14,8 +14,16 @@ function Card({ r, index }) {
       className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer overflow-hidden border border-gray-100 group"
       onClick={() => navigate(`/restaurante/${r.restaurante_id}`)}
     >
-      <div className="h-40 bg-gradient-to-br from-secundario/30 to-primario/20 flex items-center justify-center">
-        <span className="text-6xl group-hover:scale-110 transition-transform">🍽️</span>
+      <div className="h-40 bg-gradient-to-br from-secundario/30 to-primario/20 flex items-center justify-center overflow-hidden">
+        {r.foto_perfil ? (
+          <img 
+            src={`http://localhost:8000${r.foto_perfil}`}
+            alt={r.nome_fantasia}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+          />
+        ) : (
+          <span className="text-6xl group-hover:scale-110 transition-transform">🍽️</span>
+        )}
       </div>
       <div className="p-5">
         <h3 className="font-bold text-xl text-primario mb-2 group-hover:text-destaque transition">

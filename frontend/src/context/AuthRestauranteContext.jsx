@@ -60,8 +60,12 @@ export function AuthRestauranteProvider({ children }) {
     delete axios.defaults.headers.common["Authorization"];
   }
 
+  function atualizarRestaurante(dadosRestaurante) {
+    setRestaurante(dadosRestaurante);
+  }
+
   return (
-    <AuthRestauranteContext.Provider value={{ restaurante, token, loading, loginRestaurante, logoutRestaurante }}>
+    <AuthRestauranteContext.Provider value={{ restaurante, token, loading, loginRestaurante, logoutRestaurante, atualizarRestaurante, carregarRestaurante }}>
       {children}
     </AuthRestauranteContext.Provider>
   );

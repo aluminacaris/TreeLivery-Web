@@ -23,6 +23,7 @@ class RestauranteCreate(BaseModel):
     tempo_medio_entrega: Optional[int]
     taxa_entrega_base: Optional[Decimal]
     endereco: Endereco
+    foto_perfil: Optional[str] = None
 
 class RestauranteOut(BaseModel):
     restaurante_id: UUID
@@ -35,7 +36,8 @@ class RestauranteOut(BaseModel):
     taxa_entrega_base: Optional[Decimal]
     avaliacao_media: Optional[Decimal] = 0.0
     ativo: bool
-    endereco: Endereco  
+    endereco: Endereco
+    foto_perfil: Optional[str] = None
     criado_em: datetime 
     
     class Config:

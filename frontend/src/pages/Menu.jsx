@@ -159,33 +159,50 @@ export default function Menu() {
           className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-100"
         >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-primario mb-2">{restaurante.nome_fantasia}</h1>
-              {restaurante.descricao && (
-                <p className="text-gray-600 mb-3">{restaurante.descricao}</p>
-              )}
-              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                {restaurante.avaliacao_media && Number(restaurante.avaliacao_media) > 0 && (
-                  <span className="flex items-center gap-1 bg-yellow-50 text-yellow-800 px-3 py-1 rounded-full font-semibold">
-                    <span>⭐</span>
-                    <span>{Number(restaurante.avaliacao_media).toFixed(1)}</span>
-                  </span>
+            <div className="flex items-start gap-4 flex-1">
+              {/* Foto de perfil do restaurante */}
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primario flex-shrink-0">
+                {restaurante.foto_perfil ? (
+                  <img 
+                    src={`http://localhost:8000${restaurante.foto_perfil}`}
+                    alt={restaurante.nome_fantasia}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-secundario/30 to-primario/20 flex items-center justify-center">
+                    <span className="text-4xl">🍽️</span>
+                  </div>
                 )}
-                {restaurante.tempo_medio_entrega && (
-                  <span className="flex items-center gap-1">
-                    ⏱️ {restaurante.tempo_medio_entrega} min
-                  </span>
+              </div>
+              
+              <div>
+                <h1 className="text-3xl font-bold text-primario mb-2">{restaurante.nome_fantasia}</h1>
+                {restaurante.descricao && (
+                  <p className="text-gray-600 mb-3">{restaurante.descricao}</p>
                 )}
-                {restaurante.taxa_entrega_base && Number(restaurante.taxa_entrega_base) > 0 && (
-                  <span className="flex items-center gap-1">
-                    💰 Taxa: R$ {Number(restaurante.taxa_entrega_base).toFixed(2)}
-                  </span>
-                )}
-                {restaurante.telefone && (
-                  <span className="flex items-center gap-1">
-                    📞 {restaurante.telefone}
-                  </span>
-                )}
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  {restaurante.avaliacao_media && Number(restaurante.avaliacao_media) > 0 && (
+                    <span className="flex items-center gap-1 bg-yellow-50 text-yellow-800 px-3 py-1 rounded-full font-semibold">
+                      <span>⭐</span>
+                      <span>{Number(restaurante.avaliacao_media).toFixed(1)}</span>
+                    </span>
+                  )}
+                  {restaurante.tempo_medio_entrega && (
+                    <span className="flex items-center gap-1">
+                      ⏱️ {restaurante.tempo_medio_entrega} min
+                    </span>
+                  )}
+                  {restaurante.taxa_entrega_base && Number(restaurante.taxa_entrega_base) > 0 && (
+                    <span className="flex items-center gap-1">
+                      💰 Taxa: R$ {Number(restaurante.taxa_entrega_base).toFixed(2)}
+                    </span>
+                  )}
+                  {restaurante.telefone && (
+                    <span className="flex items-center gap-1">
+                      📞 {restaurante.telefone}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <button

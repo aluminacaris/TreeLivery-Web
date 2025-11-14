@@ -14,6 +14,7 @@ export default function CadastroRestaurante() {
         telefone: "",
         tempo_medio_entrega: "",
         taxa_entrega_base: "",
+        foto_perfil: null,
         endereco: {
             cep: "",
             logradouro: "",
@@ -24,16 +25,50 @@ export default function CadastroRestaurante() {
             complemento: ""
         }
     });
+    
+    const [previewFoto, setPreviewFoto] = useState(null);
 
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { success, error } = useToast();
 
     function handleChange(e) {
-        const { name, value } = e.target;
+        const { name, value, files } = e.target;
         
+        // Verifica se é upload de arquivo
+        if (name === "foto_perfil" && files && files[0]) {
+            const file = files[0];
+            
+            // Validação de tipo de arquivo
+            const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!tiposPermitidos.includes(file.type)) {
+                error("Por favor, selecione uma imagem válida (JPG, PNG, GIF ou WEBP).");
+                e.target.value = ''; // Limpa o input
+                return;
+            }
+            
+            // Validação de tamanho (máximo 5MB)
+            const tamanhoMaximo = 5 * 1024 * 1024; // 5MB em bytes
+            if (file.size > tamanhoMaximo) {
+                error("A imagem deve ter no máximo 5MB. Por favor, escolha uma imagem menor.");
+                e.target.value = ''; // Limpa o input
+                return;
+            }
+            
+            setForm(prev => ({
+                ...prev,
+                foto_perfil: file
+            }));
+            
+            // Cria preview da imagem
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewFoto(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
         // Verifica se o campo pertence ao endereço
-        if (name.startsWith("endereco.")) {
+        else if (name.startsWith("endereco.")) {
             const enderecoField = name.split(".")[1];
             setForm(prev => ({
                 ...prev,
@@ -132,14 +167,36 @@ export default function CadastroRestaurante() {
         setLoading(true);
 
         try {
-            // Converte valores numéricos
-            const payload = {
-                ...form,
-                tempo_medio_entrega: form.tempo_medio_entrega ? parseInt(form.tempo_medio_entrega) : null,
-                taxa_entrega_base: form.taxa_entrega_base ? parseFloat(form.taxa_entrega_base) : null
-            };
+            // Cria FormData para enviar dados + arquivo
+            const formData = new FormData();
+            formData.append("nome_fantasia", form.nome_fantasia);
+            formData.append("razao_social", form.razao_social);
+            formData.append("email", form.email);
+            formData.append("senha", form.senha);
+            if (form.descricao) formData.append("descricao", form.descricao);
+            if (form.telefone) formData.append("telefone", form.telefone);
+            if (form.tempo_medio_entrega) formData.append("tempo_medio_entrega", form.tempo_medio_entrega);
+            if (form.taxa_entrega_base) formData.append("taxa_entrega_base", form.taxa_entrega_base);
+            
+            // Endereço
+            formData.append("cep", form.endereco.cep);
+            formData.append("logradouro", form.endereco.logradouro);
+            formData.append("numero", form.endereco.numero);
+            formData.append("bairro", form.endereco.bairro);
+            formData.append("cidade", form.endereco.cidade);
+            formData.append("estado", form.endereco.estado);
+            if (form.endereco.complemento) formData.append("complemento", form.endereco.complemento);
+            
+            // Foto de perfil (se houver)
+            if (form.foto_perfil) {
+                formData.append("foto_perfil", form.foto_perfil);
+            }
 
-            await axios.post("http://localhost:8000/restaurantes/registro", payload);
+            await axios.post("http://localhost:8000/restaurantes/registro", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data"
+                }
+            });
             success("Restaurante cadastrado com sucesso!");
             setTimeout(() => navigate("/login-restaurante"), 1500);
         } catch (err) {
@@ -160,6 +217,36 @@ export default function CadastroRestaurante() {
                 <h2 className="text-2xl font-bold text-center text-esc mb-6">
                     Cadastrar Restaurante 🍽️
                 </h2>
+
+                {/* Campo de Foto de Perfil */}
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Foto de Perfil (Opcional)
+                    </label>
+                    <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                            <input
+                                type="file"
+                                name="foto_perfil"
+                                accept="image/*"
+                                onChange={handleChange}
+                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primario text-sm"
+                            />
+                        </div>
+                        {previewFoto && (
+                            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primario">
+                                <img 
+                                    src={previewFoto} 
+                                    alt="Preview" 
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Formatos aceitos: JPG, PNG, GIF. Tamanho recomendado: 400x400px
+                    </p>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <input

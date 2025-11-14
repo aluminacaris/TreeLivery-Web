@@ -1,5 +1,6 @@
 import { useAuthRestaurante } from "../context/AuthRestauranteContext";
 import { useNavigate } from "react-router-dom";
+import Logo from "./Logo";
 
 export default function NavbarRestaurante() {
   const { restaurante, logoutRestaurante } = useAuthRestaurante();
@@ -12,12 +13,7 @@ export default function NavbarRestaurante() {
 
   return (
     <nav className="flex justify-between items-center px-6 py-3 bg-secundario text-texto shadow-md">
-      <h1
-        className="font-extrabold text-xl cursor-pointer hover:opacity-80 transition"
-        onClick={() => navigate("/")}
-      >
-        Treelivery
-      </h1>
+      <Logo />
 
       {restaurante ? (
         <div className="flex items-center gap-4">

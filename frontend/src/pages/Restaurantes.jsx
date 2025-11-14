@@ -5,7 +5,7 @@ import { useAuthRestaurante } from "../context/AuthRestauranteContext";
 import { useToast } from "../context/ToastContext";
 
 export default function RestaurantesAdmin() {
-  const { restaurante, loading } = useAuthRestaurante();
+  const { restaurante, loading, atualizarRestaurante } = useAuthRestaurante();
   const { success, error } = useToast();
   const [pratos, setPratos] = useState([]);
   const [loadingPratos, setLoadingPratos] = useState(false);
@@ -24,6 +24,9 @@ export default function RestaurantesAdmin() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [pratoSelecionado, setPratoSelecionado] = useState(null);
   const [salvando, setSalvando] = useState(false);
+  const [editandoFoto, setEditandoFoto] = useState(false);
+  const [novaFoto, setNovaFoto] = useState(null);
+  const [previewFoto, setPreviewFoto] = useState(null);
 
   const restricoesDisponiveis = [
     "glúten",
@@ -172,6 +175,64 @@ export default function RestaurantesAdmin() {
     }
   }
 
+  // 🔹 Atualizar foto de perfil
+  function handleFotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validação de tipo
+    const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!tiposPermitidos.includes(file.type)) {
+      error("Por favor, selecione uma imagem válida (JPG, PNG, GIF ou WEBP).");
+      return;
+    }
+
+    // Validação de tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      error("A imagem deve ter no máximo 5MB.");
+      return;
+    }
+
+    setNovaFoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPreviewFoto(reader.result);
+    reader.readAsDataURL(file);
+  }
+
+  async function atualizarFotoPerfil() {
+    if (!novaFoto) return;
+
+    try {
+      setSalvando(true);
+      const token = localStorage.getItem("restaurante_token");
+      const formData = new FormData();
+      formData.append("foto_perfil", novaFoto);
+
+      const res = await axios.put(
+        "http://localhost:8000/restaurantes/foto-perfil",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Atualiza o contexto do restaurante
+      atualizarRestaurante(res.data);
+      success("Foto de perfil atualizada com sucesso!");
+      setEditandoFoto(false);
+      setNovaFoto(null);
+      setPreviewFoto(null);
+    } catch (err) {
+      console.error("Erro ao atualizar foto:", err);
+      error("Erro ao atualizar foto de perfil. Tente novamente.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   // Filtrar pratos
   const pratosFiltrados = pratos.filter(p => {
     const matchBusca = busca === "" || 
@@ -209,14 +270,85 @@ export default function RestaurantesAdmin() {
         {restaurante && (
           <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 mb-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-esc mb-1">
-                  {restaurante.nome_fantasia}
-                </h3>
-                {restaurante.descricao && (
-                  <p className="text-gray-600">{restaurante.descricao}</p>
-                )}
+              <div className="flex items-start gap-4 flex-1">
+                {/* Foto de perfil */}
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primario flex-shrink-0">
+                    {restaurante.foto_perfil ? (
+                      <img 
+                        src={`http://localhost:8000${restaurante.foto_perfil}`}
+                        alt={restaurante.nome_fantasia}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-secundario/30 to-primario/20 flex items-center justify-center">
+                        <span className="text-3xl">🍽️</span>
+                      </div>
+                    )}
+                  </div>
+                  {!editandoFoto && (
+                    <button
+                      onClick={() => setEditandoFoto(true)}
+                      className="absolute bottom-0 right-0 bg-primario text-white rounded-full p-1.5 shadow-md hover:bg-destaque transition text-xs"
+                      title="Editar foto"
+                    >
+                      📷
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-esc mb-1">
+                    {restaurante.nome_fantasia}
+                  </h3>
+                  {restaurante.descricao && (
+                    <p className="text-gray-600">{restaurante.descricao}</p>
+                  )}
+                  
+                  {/* Formulário de edição de foto */}
+                  {editandoFoto && (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFotoChange}
+                          className="text-sm"
+                        />
+                        {previewFoto && (
+                          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primario">
+                            <img 
+                              src={previewFoto} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={atualizarFotoPerfil}
+                          disabled={!novaFoto || salvando}
+                          className="bg-green-500 text-white px-3 py-1.5 rounded text-sm hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {salvando ? "Salvando..." : "Salvar"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditandoFoto(false);
+                            setNovaFoto(null);
+                            setPreviewFoto(null);
+                          }}
+                          className="bg-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-400 transition"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+              
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="bg-primario/10 text-primario px-3 py-1 rounded-lg">
                   <span className="font-semibold">{pratos.length}</span> prato{pratos.length !== 1 ? 's' : ''}
