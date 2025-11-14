@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .routes import restaurantes, pedidos, usuarios, uploads
+from .routes import restaurantes, pedidos, usuarios, uploads, avaliacoes
 from .database import Base, engine
 
 app = FastAPI(title="TreeLivery API")
@@ -26,6 +26,7 @@ app.include_router(restaurantes.router) #inclui as rotas de restaurantes
 app.include_router(pedidos.router)       #inclui as rotas de pedidos    
 app.include_router(usuarios.router)     #inclui as rotas de usuários    
 app.include_router(uploads.router)     #inclui as rotas de uploads
+app.include_router(avaliacoes.router)  #inclui as rotas de avaliações
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

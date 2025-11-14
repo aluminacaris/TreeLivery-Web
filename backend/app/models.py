@@ -55,6 +55,7 @@ class ItemPedido(Base):
     pedido_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("pedidos.pedido_id", ondelete="CASCADE"))
     prato_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("pratos.prato_id"))
     quantidade = sa.Column(sa.Integer, nullable=False)
+    nome_prato = sa.Column(sa.String(100), nullable=False)
     preco_unitario = sa.Column(sa.Numeric(10, 2), nullable=False)
 
     pedido = sa.orm.relationship("Pedido", back_populates="itens")
@@ -71,3 +72,17 @@ class Usuario(Base):
     restricoes = sa.Column(sa.ARRAY(sa.String), nullable=True)  # Ex: ["gluten", "lactose"]
     seletividade = sa.Column(sa.Boolean, default=False)  # Indica se o usuário é seletivo com alimentos
     pedidos = sa.orm.relationship("Pedido", backref="usuario")
+
+class Avaliacao(Base):
+    __tablename__ = "avaliacoes"
+    
+    avaliacao_id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pedido_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("pedidos.pedido_id", ondelete="CASCADE"), nullable=False)
+    restaurante_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("restaurantes.restaurante_id"), nullable=False)
+    usuario_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("usuarios.usuario_id"), nullable=False)
+    nota = sa.Column(sa.Integer, nullable=False)  # 1 a 5
+    comentario = sa.Column(sa.Text, nullable=True)
+    criado_em = sa.Column(sa.TIMESTAMP(timezone=True), server_default=func.now())
+    
+    # Garantir que um usuário só pode avaliar um pedido uma vez
+    __table_args__ = (sa.UniqueConstraint('pedido_id', 'usuario_id', name='uq_avaliacao_pedido_usuario'),)

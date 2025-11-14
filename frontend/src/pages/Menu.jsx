@@ -1,29 +1,101 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, number, removeItem } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
+import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Menu() {
   const { restauranteId } = useParams();
   const [pratos, setPratos] = useState([]);
+  const [restaurante, setRestaurante] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState("");
+  const [finalizando, setFinalizando] = useState(false);
   const { cartItems, addToCart, clearCart, total, removeFromCart } = useCart();
+  const { usuario } = useAuth();
+  const { success, error, info, warning } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:8000/restaurantes/${restauranteId}/menu`)
-      .then((r) => setPratos(r.data))
-      .catch(() => {});
+    carregarDados();
   }, [restauranteId]);
+
+  async function carregarDados() {
+    try {
+      setLoading(true);
+      const [menuResponse, restauranteResponse] = await Promise.all([
+        axios.get(`http://localhost:8000/restaurantes/${restauranteId}/menu`),
+        axios.get(`http://localhost:8000/restaurantes/${restauranteId}`)
+      ]);
+      setPratos(menuResponse.data);
+      setRestaurante(restauranteResponse.data);
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
+      error("Erro ao carregar informações do restaurante.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Função para verificar compatibilidade do prato com o usuário
+  function isPratoCompativel(prato) {
+    if (!usuario) return true; // Se não estiver logado, mostra todos
+
+    // Verifica restrições do usuário
+    if (usuario.restricoes && usuario.restricoes.length > 0) {
+      if (prato.restricoes && prato.restricoes.length > 0) {
+        const temRestricaoIncompativel = prato.restricoes.some((r) =>
+          usuario.restricoes.some((ur) => 
+            r.toLowerCase().includes(ur.toLowerCase()) || 
+            ur.toLowerCase().includes(r.toLowerCase())
+          )
+        );
+        if (temRestricaoIncompativel) return false;
+      }
+    }
+
+    // Se usuário é seletivo, pode querer ver apenas pratos sem restrições
+    if (usuario.seletividade && prato.restricoes && prato.restricoes.length > 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function getCompatibilidadeBadge(prato) {
+    if (!usuario) return null;
+    
+    const compativel = isPratoCompativel(prato);
+    if (!compativel) {
+      return (
+        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+          ⚠️ Incompatível com suas restrições
+        </span>
+      );
+    }
+    
+    // Destaca pratos recomendados
+    if (usuario.tipo_dieta) {
+      return (
+        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+          ✅ Recomendado
+        </span>
+      );
+    }
+    
+    return null;
+  }
 
   async function finalizarPedido() {
     if (cartItems.length === 0) {
-      alert("Seu carrinho está vazio!");
+      info("Seu carrinho está vazio!");
       return;
     }
 
     try {
+      setFinalizando(true);
       const payload = {
         restaurante_id: restauranteId,
         itens: cartItems.map((item) => ({
@@ -33,160 +105,325 @@ export default function Menu() {
       };
 
       const response = await axios.post("http://localhost:8000/pedidos/", payload);
-      alert(`✅ Pedido realizado com sucesso! ID: ${response.data.pedido_id}`);
+      success(`Pedido realizado com sucesso! ID: ${response.data.pedido_id.slice(0, 8).toUpperCase()}`);
       clearCart();
+      // Redireciona para a página de pedidos após criar
+      setTimeout(() => navigate("/meus-pedidos"), 1500);
     } catch (err) {
       console.error("❌ Erro ao criar pedido:", err);
-      alert("Erro ao finalizar pedido. Tente novamente.");
+      if (err.response?.status === 401) {
+        error("Você precisa estar logado para fazer um pedido.");
+        setTimeout(() => navigate("/login"), 2000);
+      } else {
+        error("Erro ao finalizar pedido. Tente novamente.");
+      }
+    } finally {
+      setFinalizando(false);
     }
   }
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 relative">
-      {/* Cabeçalho */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-primario">🍽️ Cardápio</h2>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-secundario text-white font-medium px-4 py-2 rounded-lg hover:bg-destaque transition"
-        >
-          ← Voltar
-        </button>
+  const pratosFiltrados = pratos.filter(p => {
+    const matchBusca = busca === "" || 
+      p.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      p.descricao?.toLowerCase().includes(busca.toLowerCase());
+    return matchBusca;
+  });
+
+  // Ordena pratos: compatíveis primeiro
+  const pratosOrdenados = [...pratosFiltrados].sort((a, b) => {
+    const aCompativel = isPratoCompativel(a);
+    const bCompativel = isPratoCompativel(b);
+    if (aCompativel && !bCompativel) return -1;
+    if (!aCompativel && bCompativel) return 1;
+    return 0;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primario mx-auto mb-4"></div>
+          <p className="text-primario font-semibold">Carregando cardápio...</p>
+        </div>
       </div>
+    );
+  }
 
-      {/* Lista de pratos */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-  <AnimatePresence>
-    {pratos.map((p) => (
-      <motion.div
-        key={p.prato_id}
-        layout
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 15 }}
-        className="bg-white rounded-xl shadow hover:shadow-lg transition-all overflow-hidden flex flex-col"
-      >
-        {/* Imagem */}
-        {p.imagem_url ? (
-          <img
-            src={`http://localhost:8000${p.imagem_url}`}
-            alt={p.nome}
-            className="h-48 w-full object-cover"
-          />
-        ) : (
-          <div className="h-48 bg-gray-100 flex items-center justify-center text-gray-400 italic">
-            sem imagem
-          </div>
-        )}
-
-        {/* Conteúdo */}
-        <div className="flex flex-col justify-between flex-1 p-4">
-          {/* Informações */}
-          <div>
-            <h3 className="text-lg font-semibold text-esc mb-1">{p.nome}</h3>
-            <p className="text-gray-600 text-sm mb-2">{p.descricao}</p>
-
-            <div className="flex flex-wrap gap-2 mb-3">
-              {p.restricoes && p.restricoes.length > 0 ? (
-                p.restricoes.map((r, i) => (
-                  <span
-                    key={i}
-                    className="bg-secundario/20 text-secundario text-xs px-2 py-1 rounded-full"
-                  >
-                    {r}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-gray-400">Sem restrições</span>
+  return (
+    <div className="max-w-7xl mx-auto p-4 md:p-6">
+      {/* Informações do Restaurante */}
+      {restaurante && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-100"
+        >
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-primario mb-2">{restaurante.nome_fantasia}</h1>
+              {restaurante.descricao && (
+                <p className="text-gray-600 mb-3">{restaurante.descricao}</p>
               )}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                {restaurante.avaliacao_media && Number(restaurante.avaliacao_media) > 0 && (
+                  <span className="flex items-center gap-1 bg-yellow-50 text-yellow-800 px-3 py-1 rounded-full font-semibold">
+                    <span>⭐</span>
+                    <span>{Number(restaurante.avaliacao_media).toFixed(1)}</span>
+                  </span>
+                )}
+                {restaurante.tempo_medio_entrega && (
+                  <span className="flex items-center gap-1">
+                    ⏱️ {restaurante.tempo_medio_entrega} min
+                  </span>
+                )}
+                {restaurante.taxa_entrega_base && Number(restaurante.taxa_entrega_base) > 0 && (
+                  <span className="flex items-center gap-1">
+                    💰 Taxa: R$ {Number(restaurante.taxa_entrega_base).toFixed(2)}
+                  </span>
+                )}
+                {restaurante.telefone && (
+                  <span className="flex items-center gap-1">
+                    📞 {restaurante.telefone}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* Rodapé do card */}
-          <div className="mt-auto flex items-center justify-between pt-2 border-t border-gray-100">
-            <span className="font-bold text-lg text-primario">
-              R$ {Number(p.preco).toFixed(2)}
-            </span>
             <button
-              onClick={() => addToCart(p)}
-              className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-destaque transition font-medium"
+              onClick={() => navigate("/")}
+              className="bg-secundario text-white font-medium px-4 py-2 rounded-lg hover:bg-destaque transition whitespace-nowrap"
             >
-              + Adicionar
+              ← Voltar
             </button>
           </div>
+        </motion.div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Lista de pratos */}
+        <div className="flex-1">
+          {/* Busca */}
+          <div className="mb-6">
+            <input
+              type="text"
+              placeholder="🔍 Buscar pratos..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full px-4 py-3 border border-secundario rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+            />
+          </div>
+
+          {pratosFiltrados.length === 0 ? (
+            <div className="bg-white rounded-xl shadow p-12 text-center">
+              <div className="text-6xl mb-4">🍽️</div>
+              <p className="text-gray-600 text-lg mb-2 font-medium">
+                {busca !== "" 
+                  ? "Nenhum prato encontrado com essa busca." 
+                  : "Nenhum prato disponível no momento."}
+              </p>
+              {busca !== "" && (
+                <button
+                  onClick={() => setBusca("")}
+                  className="text-primario hover:underline mt-2"
+                >
+                  Limpar busca
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <AnimatePresence>
+                {pratosOrdenados.map((p, index) => {
+                  const compativel = isPratoCompativel(p);
+                  return (
+                    <motion.div
+                      key={p.prato_id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: compativel ? 1 : 0.6, y: 0 }}
+                      exit={{ opacity: 0, y: 15 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden flex flex-col border ${
+                        compativel ? "border-gray-100" : "border-red-200"
+                      }`}
+                    >
+                    {/* Imagem */}
+                    {p.imagem_url ? (
+                      <img
+                        src={`http://localhost:8000${p.imagem_url}`}
+                        alt={p.nome}
+                        className="h-48 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-48 bg-gradient-to-br from-secundario/20 to-primario/10 flex items-center justify-center text-gray-400">
+                        <span className="text-4xl">🍽️</span>
+                      </div>
+                    )}
+
+                    {/* Conteúdo */}
+                    <div className="flex flex-col justify-between flex-1 p-4">
+                      {/* Informações */}
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className="text-lg font-semibold text-esc flex-1">{p.nome}</h3>
+                          {getCompatibilidadeBadge(p)}
+                        </div>
+                        {p.descricao && (
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{p.descricao}</p>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {p.restricoes && p.restricoes.length > 0 ? (
+                            p.restricoes.map((r, i) => (
+                              <span
+                                key={i}
+                                className="bg-secundario/20 text-secundario text-xs px-2 py-1 rounded-full font-medium"
+                              >
+                                {r}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-400">Sem restrições</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Rodapé do card */}
+                      <div className="mt-auto flex items-center justify-between pt-3 border-t border-gray-100">
+                        <span className="font-bold text-xl text-primario">
+                          R$ {Number(p.preco).toFixed(2)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (!compativel) {
+                              warning("Este prato pode não ser compatível com suas restrições. Deseja continuar?");
+                            }
+                            addToCart(p);
+                            success(`${p.nome} adicionado ao carrinho!`);
+                          }}
+                          className={`px-4 py-2 rounded-lg transition font-medium flex items-center gap-2 ${
+                            compativel
+                              ? "bg-primario text-white hover:bg-destaque"
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          }`}
+                        >
+                          <span>+</span>
+                          <span>Adicionar</span>
+                        </button>
+                      </div>
+                    </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
-      </motion.div>
-    ))}
-  </AnimatePresence>
-</div>
 
-{/* Carrinho */}
-<div className="bg-white p-6 rounded-xl shadow mt-10">
-  <h3 className="font-bold text-primario text-lg mb-4 flex items-center gap-2">
-    🛒 Seu Carrinho
-  </h3>
+        {/* Carrinho Sticky */}
+        <div className="lg:w-96 lg:sticky lg:top-4 lg:h-fit">
+          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <h3 className="font-bold text-primario text-xl mb-4 flex items-center gap-2">
+              <span>🛒</span>
+              <span>Seu Carrinho</span>
+              {cartItems.length > 0 && (
+                <span className="bg-primario text-white text-sm px-2 py-1 rounded-full">
+                  {cartItems.length}
+                </span>
+              )}
+            </h3>
 
-  {cartItems.length === 0 ? (
-    <p className="text-gray-500 text-center py-4">Seu carrinho está vazio.</p>
-  ) : (
-    <>
-      <ul className="divide-y divide-gray-200 mb-4">
-        {cartItems.map((item) => (
-          <li
-            key={item.prato_id}
-            className="flex justify-between items-center py-3"
-          >
-            <div className="flex flex-col">
-              <span className="font-medium text-texto">{item.nome}</span>
-              <span className="text-sm text-gray-500">
-                R$ {Number(item.preco).toFixed(2)} cada
-              </span>
-            </div>
+            {cartItems.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-5xl mb-3">🛒</div>
+                <p className="text-gray-500">Seu carrinho está vazio.</p>
+                <p className="text-sm text-gray-400 mt-2">Adicione itens do cardápio</p>
+              </div>
+            ) : (
+              <>
+                <div className="max-h-64 overflow-y-auto mb-4 space-y-3">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.prato_id}
+                      className="flex justify-between items-start p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-texto block truncate">{item.nome}</span>
+                        <span className="text-sm text-gray-500">
+                          R$ {Number(item.preco).toFixed(2)} cada
+                        </span>
+                      </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => addToCart(item, -1)}
-                className="bg-secundario/20 text-primario rounded-full w-7 h-7 flex items-center justify-center hover:bg-secundario/30"
-              >
-                −
-              </button>
+                      <div className="flex items-center gap-2 ml-2">
+                        <button
+                          onClick={() => addToCart(item, -1)}
+                          className="bg-secundario/20 text-primario rounded-full w-7 h-7 flex items-center justify-center hover:bg-secundario/30 transition"
+                        >
+                          −
+                        </button>
 
-              <span className="text-texto font-medium w-6 text-center">
-                {item.quantity}
-              </span>
+                        <span className="text-texto font-medium w-6 text-center">
+                          {item.quantity}
+                        </span>
 
-              <button
-                onClick={() => addToCart(item, 1)}
-                className="bg-primario text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-destaque"
-              >
-                +
-              </button>
+                        <button
+                          onClick={() => addToCart(item, 1)}
+                          className="bg-primario text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-destaque transition"
+                        >
+                          +
+                        </button>
 
-              <button
-                onClick={() => removeFromCart(item.prato_id)}
-                className="ml-2 text-red-500 hover:text-red-700 text-sm"
-              >
-                🗑️
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+                        <button
+                          onClick={() => removeFromCart(item.prato_id)}
+                          className="ml-1 text-red-500 hover:text-red-700 text-sm p-1"
+                          title="Remover"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-      <div className="flex justify-between items-center font-semibold text-lg border-t pt-4">
-        <span>Total:</span>
-        <span className="text-primario">R$ {Number(total).toFixed(2)}</span>
+                <div className="border-t border-gray-200 pt-4 mb-4">
+                  <div className="flex justify-between items-center font-semibold text-lg mb-2">
+                    <span>Subtotal:</span>
+                    <span className="text-primario">R$ {Number(total).toFixed(2)}</span>
+                  </div>
+                  {restaurante?.taxa_entrega_base && Number(restaurante.taxa_entrega_base) > 0 && (
+                    <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
+                      <span>Taxa de entrega:</span>
+                      <span>R$ {Number(restaurante.taxa_entrega_base).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center font-bold text-xl pt-2 border-t border-gray-200">
+                    <span>Total:</span>
+                    <span className="text-primario">
+                      R$ {(Number(total) + Number(restaurante?.taxa_entrega_base || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={finalizarPedido}
+                  disabled={finalizando}
+                  className="w-full bg-primario text-white font-semibold py-3 rounded-lg hover:bg-destaque transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {finalizando ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Finalizando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✅</span>
+                      <span>Finalizar Pedido</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
-
-      <button
-        onClick={finalizarPedido}
-        className="mt-5 w-full bg-primario text-white font-semibold py-2 rounded-lg hover:bg-destaque transition"
-      >
-        Finalizar Pedido
-      </button>
-    </>
-  )}
-</div>
     </div>
   );
 }

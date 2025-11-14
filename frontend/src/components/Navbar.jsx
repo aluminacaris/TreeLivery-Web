@@ -20,8 +20,15 @@ export default function Navbar() {
       </h1>
 
       {usuario ? (
-        <div className="flex items-center gap-4">
-          <span className="font-medium">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/meus-pedidos")}
+            className="px-4 py-1.5 rounded-full bg-white text-primario font-semibold text-sm hover:bg-primario hover:text-white transition duration-200 shadow-sm border border-primario flex items-center gap-2"
+          >
+            <span>📦</span>
+            <span>Meus Pedidos</span>
+          </button>
+          <span className="font-medium hidden sm:inline">
             Olá, <span className="font-semibold">{usuario.nome}</span> 👋
           </span>
           <button

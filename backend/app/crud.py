@@ -82,7 +82,6 @@ async def update_prato(db: AsyncSession, prato_id: UUID, dados: schemas.PratoCre
     await db.refresh(prato)
     return prato
 
-# ❌ Deletar prato
 async def delete_prato(db: AsyncSession, prato_id: UUID):
     result = await db.execute(select(models.Prato).where(models.Prato.prato_id == prato_id))
     prato = result.scalar_one_or_none()
@@ -94,13 +93,14 @@ async def delete_prato(db: AsyncSession, prato_id: UUID):
     await db.commit()
     return True
 
-async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
+async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate, usuario_id: UUID):
     from . import models
     
     total = 0
     # calcula o total
     pedido = models.Pedido(
         restaurante_id=pedido_data.restaurante_id,
+        usuario_id=usuario_id,  # Associa o pedido ao usuário logado
         total=0  # atualizamos depois
     )    
     db.add(pedido)
@@ -115,11 +115,13 @@ async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
             raise Exception(f"Prato {item.prato_id} não encontrado")
         
         preco = float(prato.preco)
+        nome_prato = str(prato.nome)
         total += preco * item.quantidade
         
         novo_item = models.ItemPedido(
             pedido_id=pedido.pedido_id,
             prato_id=item.prato_id,
+            nome_prato=nome_prato,
             quantidade=item.quantidade,
             preco_unitario=preco #puxa automatico
         )
@@ -138,6 +140,53 @@ async def create_pedido(db: AsyncSession, pedido_data: schemas.PedidoCreate):
     pedido_com_itens = result.scalar_one()
 
     return pedido_com_itens
+
+async def get_pedidos_restaurante(db: AsyncSession, restaurante_id: UUID):
+    from .models import Pedido
+
+    result = await db.execute(
+        sa.select(Pedido)
+        .options(selectinload(Pedido.itens))
+        .where(Pedido.restaurante_id == restaurante_id)
+        .order_by(Pedido.data_pedido.desc())
+    )
+    return result.scalars().all()
+
+async def update_pedido_status(db: AsyncSession, pedido_id: UUID, novo_status: str, restaurante_id: UUID):
+    from .models import Pedido
+
+    # Validação de status válidos
+    status_validos = ["Recebido", "Em preparo", "Saiu para entrega", "Entregue", "Cancelado"]
+    if novo_status not in status_validos:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Status inválido. Status válidos: {', '.join(status_validos)}"
+        )
+
+    pedido = await db.get(Pedido, pedido_id)
+
+    if not pedido:
+        return None
+
+    # Valida que o restaurante só pode atualizar seus próprios pedidos
+    if pedido.restaurante_id != restaurante_id:
+        return None
+
+    pedido.status = novo_status
+    await db.commit()
+    await db.refresh(pedido)
+    return pedido
+
+async def get_pedidos_usuario(db: AsyncSession, usuario_id: UUID):
+    from .models import Pedido
+
+    result = await db.execute(
+        sa.select(Pedido)
+        .options(selectinload(Pedido.itens))
+        .where(Pedido.usuario_id == usuario_id)
+        .order_by(Pedido.data_pedido.desc())
+    )
+    return result.scalars().all()
 
 async def criar_usuario(db: AsyncSession, usuario: schemas.UsuarioCreate):
         # Verifica se já existe o email
@@ -159,3 +208,86 @@ async def criar_usuario(db: AsyncSession, usuario: schemas.UsuarioCreate):
     await db.commit()
     await db.refresh(novo_usuario)
     return novo_usuario
+
+# ========== AVALIAÇÕES ==========
+
+async def criar_avaliacao(db: AsyncSession, avaliacao_data: schemas.AvaliacaoCreate, usuario_id: UUID):
+    from .models import Avaliacao, Pedido
+    
+    # Valida nota (1 a 5)
+    if avaliacao_data.nota < 1 or avaliacao_data.nota > 5:
+        raise HTTPException(status_code=400, detail="A nota deve estar entre 1 e 5")
+    
+    # Verifica se o pedido existe e pertence ao usuário
+    pedido = await db.get(Pedido, avaliacao_data.pedido_id)
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    
+    if pedido.usuario_id != usuario_id:
+        raise HTTPException(status_code=403, detail="Você só pode avaliar seus próprios pedidos")
+    
+    # Verifica se já existe avaliação para este pedido
+    result = await db.execute(
+        sa.select(Avaliacao).where(
+            Avaliacao.pedido_id == avaliacao_data.pedido_id,
+            Avaliacao.usuario_id == usuario_id
+        )
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Este pedido já foi avaliado")
+    
+    # Cria a avaliação
+    avaliacao = Avaliacao(
+        pedido_id=avaliacao_data.pedido_id,
+        restaurante_id=pedido.restaurante_id,
+        usuario_id=usuario_id,
+        nota=avaliacao_data.nota,
+        comentario=avaliacao_data.comentario
+    )
+    
+    db.add(avaliacao)
+    await db.commit()
+    await db.refresh(avaliacao)
+    
+    # Atualiza a média de avaliações do restaurante
+    await atualizar_media_avaliacoes_restaurante(db, pedido.restaurante_id)
+    
+    return avaliacao
+
+async def get_avaliacoes_restaurante(db: AsyncSession, restaurante_id: UUID):
+    from .models import Avaliacao
+    
+    result = await db.execute(
+        sa.select(Avaliacao)
+        .where(Avaliacao.restaurante_id == restaurante_id)
+        .order_by(Avaliacao.criado_em.desc())
+    )
+    return result.scalars().all()
+
+async def get_avaliacao_pedido(db: AsyncSession, pedido_id: UUID, usuario_id: UUID):
+    from .models import Avaliacao
+    
+    result = await db.execute(
+        sa.select(Avaliacao).where(
+            Avaliacao.pedido_id == pedido_id,
+            Avaliacao.usuario_id == usuario_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+async def atualizar_media_avaliacoes_restaurante(db: AsyncSession, restaurante_id: UUID):
+    from .models import Avaliacao, Restaurante
+    
+    # Calcula a média das avaliações
+    result = await db.execute(
+        sa.select(sa.func.avg(Avaliacao.nota))
+        .where(Avaliacao.restaurante_id == restaurante_id)
+    )
+    media = result.scalar()
+    
+    # Atualiza o restaurante
+    restaurante = await db.get(Restaurante, restaurante_id)
+    if restaurante:
+        restaurante.avaliacao_media = float(media) if media else 0.0
+        await db.commit()
+        await db.refresh(restaurante)

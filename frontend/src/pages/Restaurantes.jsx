@@ -2,11 +2,16 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthRestaurante } from "../context/AuthRestauranteContext";
+import { useToast } from "../context/ToastContext";
 
 export default function RestaurantesAdmin() {
   const { restaurante, loading } = useAuthRestaurante();
+  const { success, error } = useToast();
   const [pratos, setPratos] = useState([]);
+  const [loadingPratos, setLoadingPratos] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [filtroDisponivel, setFiltroDisponivel] = useState("todos");
   const [form, setForm] = useState({
     nome: "",
     descricao: "",
@@ -18,6 +23,7 @@ export default function RestaurantesAdmin() {
   const [novaRestricao, setNovaRestricao] = useState("");
   const [mostrarModal, setMostrarModal] = useState(false);
   const [pratoSelecionado, setPratoSelecionado] = useState(null);
+  const [salvando, setSalvando] = useState(false);
 
   const restricoesDisponiveis = [
     "glúten",
@@ -53,19 +59,36 @@ export default function RestaurantesAdmin() {
   // 🔹 Buscar pratos
   async function fetchPratos() {
     try {
+      setLoadingPratos(true);
       const res = await axios.get(
         `http://localhost:8000/restaurantes/${restaurante.restaurante_id}/menu`
       );
       setPratos(res.data);
     } catch (err) {
       console.error("Erro ao buscar pratos:", err);
+      error("Erro ao carregar pratos. Tente novamente.");
+    } finally {
+      setLoadingPratos(false);
     }
   }
 
   // 🔹 Criar novo prato
   async function submitPrato(e) {
     e.preventDefault();
+    
+    // Validações
+    if (!form.nome.trim()) {
+      error("Por favor, informe o nome do prato.");
+      return;
+    }
+
+    if (!form.preco || Number(form.preco) <= 0) {
+      error("Por favor, informe um preço válido maior que zero.");
+      return;
+    }
+
     try {
+      setSalvando(true);
       const token = localStorage.getItem("restaurante_token");
       const payload = { ...form, preco: parseFloat(form.preco) };
 
@@ -101,15 +124,21 @@ export default function RestaurantesAdmin() {
         imagem: null,
       });
       setShowForm(false);
+      success("Prato criado com sucesso!");
       fetchPratos();
     } catch (err) {
       console.error("Erro ao criar prato:", err);
+      const errorMsg = err.response?.data?.detail || "Erro ao criar prato. Tente novamente.";
+      error(errorMsg);
+    } finally {
+      setSalvando(false);
     }
   }
 
   // 🔹 Atualizar prato
   async function updatePrato(pratoId) {
     try {
+      setSalvando(true);
       const payload = {
         ...form,
         preco: Number(form.preco),
@@ -118,9 +147,14 @@ export default function RestaurantesAdmin() {
       await axios.put(`http://localhost:8000/restaurantes/menu/${pratoId}`, payload);
       setEditando(null);
       setForm({ nome: "", descricao: "", preco: "", restricoes: [] });
+      success("Prato atualizado com sucesso!");
       fetchPratos();
     } catch (err) {
       console.error("Erro ao atualizar prato:", err);
+      const errorMsg = err.response?.data?.detail || "Erro ao atualizar prato. Tente novamente.";
+      error(errorMsg);
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -128,44 +162,129 @@ export default function RestaurantesAdmin() {
   async function deletePrato() {
     try {
       await axios.delete(`http://localhost:8000/restaurantes/menu/${pratoSelecionado}`);
+      success("Prato excluído com sucesso!");
       fetchPratos();
       setMostrarModal(false);
+      setPratoSelecionado(null);
     } catch (err) {
       console.error("Erro ao deletar prato:", err);
+      error("Erro ao excluir prato. Tente novamente.");
     }
   }
+
+  // Filtrar pratos
+  const pratosFiltrados = pratos.filter(p => {
+    const matchBusca = busca === "" || 
+      p.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      p.descricao?.toLowerCase().includes(busca.toLowerCase());
+    
+    const matchDisponivel = filtroDisponivel === "todos" ||
+      (filtroDisponivel === "disponivel" && p.disponivel) ||
+      (filtroDisponivel === "indisponivel" && !p.disponivel);
+    
+    return matchBusca && matchDisponivel;
+  });
 
   useEffect(() => {
     if (restaurante) fetchPratos();
   }, [restaurante]);
 
   if (loading)
-    return <div className="p-8 text-center text-gray-600">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primario mx-auto mb-4"></div>
+          <p className="text-primario font-semibold">Carregando...</p>
+        </div>
+      </div>
+    );
 
   return (
-    <div className="max-w-6xl mx-auto p-6 relative">
-      <h2 className="text-3xl font-bold text-primario mb-6">
-        Painel do Restaurante
-      </h2>
+    <div className="max-w-7xl mx-auto p-4 md:p-6">
+      {/* Cabeçalho */}
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-primario mb-2">
+          🍽️ Painel do Restaurante
+        </h2>
+        {restaurante && (
+          <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 mb-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-2xl font-bold text-esc mb-1">
+                  {restaurante.nome_fantasia}
+                </h3>
+                {restaurante.descricao && (
+                  <p className="text-gray-600">{restaurante.descricao}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="bg-primario/10 text-primario px-3 py-1 rounded-lg">
+                  <span className="font-semibold">{pratos.length}</span> prato{pratos.length !== 1 ? 's' : ''}
+                </div>
+                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-lg">
+                  <span className="font-semibold">
+                    {pratos.filter(p => p.disponivel).length}
+                  </span> disponível{pratos.filter(p => p.disponivel).length !== 1 ? 'is' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {restaurante && (
-        <div className="bg-white p-5 rounded-xl shadow mb-6">
-          <h3 className="text-xl font-semibold text-esc">
-            {restaurante.nome_fantasia}
-          </h3>
-          <p className="text-gray-600">{restaurante.descricao}</p>
-        </div>
-      )}
-
-      <div className="bg-white p-6 rounded-xl shadow space-y-6">
-        <div className="flex justify-between items-center">
-          <h4 className="text-xl font-semibold text-esc">Cardápio</h4>
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h4 className="text-2xl font-bold text-esc">📋 Cardápio</h4>
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-destaque transition"
+            className="bg-primario text-white px-5 py-2 rounded-lg hover:bg-destaque transition font-medium flex items-center gap-2 whitespace-nowrap"
           >
-            {showForm ? "Cancelar" : "+ Novo prato"}
+            <span>{showForm ? "✕" : "+"}</span>
+            <span>{showForm ? "Cancelar" : "Novo Prato"}</span>
           </button>
+        </div>
+
+        {/* Busca e Filtros */}
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="🔍 Buscar pratos..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full px-4 py-2 border border-secundario rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFiltroDisponivel("todos")}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filtroDisponivel === "todos"
+                  ? "bg-primario text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Todos ({pratos.length})
+            </button>
+            <button
+              onClick={() => setFiltroDisponivel("disponivel")}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filtroDisponivel === "disponivel"
+                  ? "bg-green-500 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              ✅ Disponíveis ({pratos.filter(p => p.disponivel).length})
+            </button>
+            <button
+              onClick={() => setFiltroDisponivel("indisponivel")}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filtroDisponivel === "indisponivel"
+                  ? "bg-red-500 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              ❌ Indisponíveis ({pratos.filter(p => !p.disponivel).length})
+            </button>
+          </div>
         </div>
 
         {/* 🧾 Formulário animado de novo prato */}
@@ -273,41 +392,79 @@ export default function RestaurantesAdmin() {
 
               <button
                 type="submit"
-                className="bg-primario text-white w-full py-2 rounded-lg hover:bg-destaque transition"
+                disabled={salvando}
+                className="bg-primario text-white w-full py-2 rounded-lg hover:bg-destaque transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Salvar prato
+                {salvando ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Salvando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✅</span>
+                    <span>Salvar Prato</span>
+                  </>
+                )}
               </button>
             </motion.form>
           )}
         </AnimatePresence>
 
         {/* 🍽️ Lista de pratos */}
-        <div className="grid gap-4">
-          <AnimatePresence>
-            {pratos.map((p) => (
-              <motion.div
-                key={p.prato_id}
-                layout
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ type: "spring", stiffness: 80 }}
-                className="border rounded-lg p-4 flex flex-col sm:flex-row gap-4 shadow-sm hover:shadow-md transition"
+        {loadingPratos ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primario mx-auto mb-3"></div>
+              <p className="text-gray-600">Carregando pratos...</p>
+            </div>
+          </div>
+        ) : pratosFiltrados.length === 0 ? (
+          <div className="bg-gray-50 rounded-xl p-12 text-center">
+            <div className="text-6xl mb-4">🍽️</div>
+            <p className="text-gray-600 text-lg mb-2 font-medium">
+              {busca !== "" || filtroDisponivel !== "todos"
+                ? "Nenhum prato encontrado com os filtros aplicados."
+                : "Nenhum prato cadastrado ainda."}
+            </p>
+            {busca !== "" && (
+              <button
+                onClick={() => setBusca("")}
+                className="text-primario hover:underline mt-2"
               >
+                Limpar busca
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            <AnimatePresence>
+              {pratosFiltrados.map((p, index) => (
+                <motion.div
+                  key={p.prato_id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: index * 0.05, type: "spring", stiffness: 80 }}
+                  className={`border rounded-xl p-4 flex flex-col sm:flex-row gap-4 shadow-md hover:shadow-lg transition ${
+                    !p.disponivel ? "opacity-60 bg-gray-50" : "bg-white"
+                  }`}
+                >
                 {/* imagem + conteúdo aqui (mantém igual à sua versão anterior) */}
-                 <div className="w-full sm:w-40 h-32 bg-gray-100 flex-shrink-0 rounded overflow-hidden">
-                  {p.imagem_url ? (
-                    <img
-                      src={`http://localhost:8000${p.imagem_url}`}
-                      alt={p.nome}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400 italic">
-                      sem imagem
-                    </div>
-                  )}
-                </div>
+                  <div className="w-full sm:w-40 h-32 bg-gradient-to-br from-secundario/20 to-primario/10 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200">
+                    {p.imagem_url ? (
+                      <img
+                        src={`http://localhost:8000${p.imagem_url}`}
+                        alt={p.nome}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        <span className="text-4xl">🍽️</span>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex-1">
                   {editando === p.prato_id ? (
@@ -398,14 +555,28 @@ export default function RestaurantesAdmin() {
                       <div className="flex gap-2 mt-3">
                         <button
                           type="submit"
-                          className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
+                          disabled={salvando}
+                          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium flex items-center gap-2 disabled:opacity-50"
                         >
-                          Salvar
+                          {salvando ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Salvando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>✅</span>
+                              <span>Salvar</span>
+                            </>
+                          )}
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditando(null)}
-                          className="bg-gray-300 px-4 py-1 rounded hover:bg-gray-400"
+                          onClick={() => {
+                            setEditando(null);
+                            setForm({ nome: "", descricao: "", preco: "", restricoes: [] });
+                          }}
+                          className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-medium"
                         >
                           Cancelar
                         </button>
@@ -413,54 +584,74 @@ export default function RestaurantesAdmin() {
                     </form>
                   ) : (
                     <>
-                      <h4 className="font-semibold text-lg text-esc">{p.nome}</h4>
-                      <p className="text-sm text-gray-600">{p.descricao}</p>
-                      <p className="font-semibold text-primario mt-1">
-                        R$ {p.preco}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className="font-bold text-lg text-esc">{p.nome}</h4>
+                        {!p.disponivel && (
+                          <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                            Indisponível
+                          </span>
+                        )}
+                      </div>
+                      {p.descricao && (
+                        <p className="text-sm text-gray-600 mb-2">{p.descricao}</p>
+                      )}
+                      <p className="font-bold text-xl text-primario mb-2">
+                        R$ {Number(p.preco).toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {p.restricoes?.length
-                          ? "Contém: " + p.restricoes.join(", ")
-                          : "Sem restrições"}
-                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {p.restricoes?.length > 0 ? (
+                          p.restricoes.map((r, i) => (
+                            <span
+                              key={i}
+                              className="bg-secundario/20 text-secundario text-xs px-2 py-1 rounded-full font-medium"
+                            >
+                              {r}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400">Sem restrições</span>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
 
-                                  {/* Ações */}
-                {editando !== p.prato_id && (
-                  <div className="flex sm:flex-col gap-2 justify-center">
-                    <button
-                      onClick={() => {
-                        setEditando(p.prato_id);
-                        setForm({
-                          nome: p.nome,
-                          descricao: p.descricao,
-                          preco: p.preco,
-                          restricoes: p.restricoes || [],
-                        });
-                      }}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMostrarModal(true);
-                        setPratoSelecionado(p.prato_id);
-                      }}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      🗑️ Excluir
-                    </button>
-                  </div>
-                )}
+                  {/* Ações */}
+                  {editando !== p.prato_id && (
+                    <div className="flex sm:flex-col gap-2 justify-center">
+                      <button
+                        onClick={() => {
+                          setEditando(p.prato_id);
+                          setForm({
+                            nome: p.nome,
+                            descricao: p.descricao,
+                            preco: p.preco,
+                            restricoes: p.restricoes || [],
+                          });
+                        }}
+                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium flex items-center gap-2"
+                      >
+                        <span>✏️</span>
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMostrarModal(true);
+                          setPratoSelecionado(p.prato_id);
+                        }}
+                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium flex items-center gap-2"
+                      >
+                        <span>🗑️</span>
+                        <span>Excluir</span>
+                      </button>
+                    </div>
+                  )}
 
-                {/* ... */}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* 🩶 Modal com animação */}

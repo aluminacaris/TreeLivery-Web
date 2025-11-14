@@ -21,6 +21,18 @@ export default function NavbarRestaurante() {
 
       {restaurante ? (
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/restaurantes-admin")}
+            className="px-3 py-1.5 rounded-lg bg-white/20 text-white font-medium text-sm hover:bg-white/30 transition"
+          >
+            📝 Meu Restaurante
+          </button>
+          <button
+            onClick={() => navigate("/pedidos-restaurante")}
+            className="px-3 py-1.5 rounded-lg bg-white/20 text-white font-medium text-sm hover:bg-white/30 transition"
+          >
+            📦 Pedidos
+          </button>
           <span className="font-medium">
             Olá, <span className="font-semibold">{restaurante.razao_social}</span> 👋
           </span>

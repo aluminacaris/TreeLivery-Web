@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import axios from "axios";  
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../context/ToastContext";
 
 export default function CadastroRestaurante() {
     const [form, setForm] = useState({
@@ -26,6 +27,7 @@ export default function CadastroRestaurante() {
 
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { success, error } = useToast();
 
     function handleChange(e) {
         const { name, value } = e.target;
@@ -48,8 +50,85 @@ export default function CadastroRestaurante() {
         }
     }
 
+    function validarEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    function validarCEP(cep) {
+        const re = /^\d{5}-?\d{3}$/;
+        return re.test(cep.replace(/\D/g, ''));
+    }
+
     async function handleSubmit(e) {
         e.preventDefault();
+        
+        // Validações
+        if (!form.nome_fantasia.trim()) {
+            error("Por favor, informe o nome fantasia.");
+            return;
+        }
+
+        if (!form.razao_social.trim()) {
+            error("Por favor, informe a razão social.");
+            return;
+        }
+
+        if (!form.email.trim()) {
+            error("Por favor, informe o email.");
+            return;
+        }
+
+        if (!validarEmail(form.email)) {
+            error("Por favor, informe um email válido.");
+            return;
+        }
+
+        if (!form.senha) {
+            error("Por favor, informe uma senha.");
+            return;
+        }
+
+        if (form.senha.length < 3) {
+            error("A senha deve ter pelo menos 3 caracteres.");
+            return;
+        }
+
+        if (!form.endereco.cep.trim()) {
+            error("Por favor, informe o CEP.");
+            return;
+        }
+
+        if (!validarCEP(form.endereco.cep)) {
+            error("Por favor, informe um CEP válido.");
+            return;
+        }
+
+        if (!form.endereco.logradouro.trim()) {
+            error("Por favor, informe o logradouro.");
+            return;
+        }
+
+        if (!form.endereco.numero.trim()) {
+            error("Por favor, informe o número.");
+            return;
+        }
+
+        if (!form.endereco.bairro.trim()) {
+            error("Por favor, informe o bairro.");
+            return;
+        }
+
+        if (!form.endereco.cidade.trim()) {
+            error("Por favor, informe a cidade.");
+            return;
+        }
+
+        if (!form.endereco.estado.trim()) {
+            error("Por favor, informe o estado.");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -61,11 +140,12 @@ export default function CadastroRestaurante() {
             };
 
             await axios.post("http://localhost:8000/restaurantes/registro", payload);
-            alert("Restaurante cadastrado com sucesso!");
-            navigate("/login-restaurante");
+            success("Restaurante cadastrado com sucesso!");
+            setTimeout(() => navigate("/login-restaurante"), 1500);
         } catch (err) {
             console.error("❌ Erro ao cadastrar restaurante:", err);
-            alert("Erro ao cadastrar. Verifique os dados e tente novamente.");
+            const errorMsg = err.response?.data?.detail || "Erro ao cadastrar. Verifique os dados e tente novamente.";
+            error(errorMsg);
         } finally {
             setLoading(false);
         }

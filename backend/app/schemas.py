@@ -33,6 +33,7 @@ class RestauranteOut(BaseModel):
     telefone: Optional[str]
     tempo_medio_entrega: Optional[int]
     taxa_entrega_base: Optional[Decimal]
+    avaliacao_media: Optional[Decimal] = 0.0
     ativo: bool
     endereco: Endereco  
     criado_em: datetime 
@@ -67,7 +68,12 @@ class PedidoCreate(BaseModel):
 class ItemPedidoOut(ItemPedidoCreate):
     item_id: UUID
     pedido_id: UUID
+    nome_prato: str
+    quantidade: int
     preco_unitario: Decimal
+    
+    class Config:
+        orm_mode = True
 
 class PedidoOut(BaseModel):
     pedido_id: UUID
@@ -77,6 +83,10 @@ class PedidoOut(BaseModel):
     status: str
     total: Decimal
     itens: List[ItemPedidoOut]
+    
+    class Config:
+        orm_mode = True
+
     
 class UsuarioBase(BaseModel):
     nome: str
@@ -108,3 +118,20 @@ class UsuarioOut(UsuarioBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class AvaliacaoCreate(BaseModel):
+    pedido_id: UUID
+    nota: int  # 1 a 5
+    comentario: Optional[str] = None
+
+class AvaliacaoOut(BaseModel):
+    avaliacao_id: UUID
+    pedido_id: UUID
+    restaurante_id: UUID
+    usuario_id: UUID
+    nota: int
+    comentario: Optional[str]
+    criado_em: datetime
+    
+    class Config:
+        from_attributes = True

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";  
 import { Navigate, useNavigate } from "react-router-dom";
+import { useToast } from "../context/ToastContext";
 
 export default function Cadastro() {
     const [ form, setForm ] = useState({
@@ -23,7 +24,8 @@ export default function Cadastro() {
     ];
 
     const [novaRestricao, setNovaRestricao] = useState("");
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
+    const { success, error } = useToast(); 
 
     function handleChange(e) {
         const { name, value, type, checked } = e.target;
@@ -47,15 +49,48 @@ export default function Cadastro() {
     setNovaRestricao(""); // limpa o input
     }
 
+    function validarEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
     async function handleSubmit(e) {
         e.preventDefault();
+        
+        // Validações
+        if (!form.nome.trim()) {
+            error("Por favor, informe seu nome.");
+            return;
+        }
+
+        if (!form.email.trim()) {
+            error("Por favor, informe seu email.");
+            return;
+        }
+
+        if (!validarEmail(form.email)) {
+            error("Por favor, informe um email válido.");
+            return;
+        }
+
+        if (!form.senha) {
+            error("Por favor, informe uma senha.");
+            return;
+        }
+
+        if (form.senha.length < 3) {
+            error("A senha deve ter pelo menos 3 caracteres.");
+            return;
+        }
+
         try {
             await axios.post("http://localhost:8000/usuarios/", form);  
-            alert("Cadastro realizado com sucesso");
-            navigate("/login");
+            success("Cadastro realizado com sucesso!");
+            setTimeout(() => navigate("/login"), 1500);
         } catch (err) {
             console.error("❌ Erro ao cadastrar:", err);
-            alert("Erro ao cadastrar. Verifique os dados e tente novamente.");
+            const errorMsg = err.response?.data?.detail || "Erro ao cadastrar. Verifique os dados e tente novamente.";
+            error(errorMsg);
         }
     }
 

@@ -1,21 +1,61 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { error } = useToast();
+
+  function validarEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const ok = await login(email, senha);
-    if (ok) {
-      navigate("/");
-    } else {
-      setErro("Email ou senha inválidos.");
+    setErro("");
+
+    // Validações
+    if (!email.trim()) {
+      setErro("Por favor, informe seu email.");
+      return;
+    }
+
+    if (!validarEmail(email)) {
+      setErro("Por favor, informe um email válido.");
+      return;
+    }
+
+    if (!senha) {
+      setErro("Por favor, informe sua senha.");
+      return;
+    }
+
+    if (senha.length < 3) {
+      setErro("A senha deve ter pelo menos 3 caracteres.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const ok = await login(email, senha);
+      if (ok) {
+        navigate("/");
+      } else {
+        setErro("Email ou senha inválidos.");
+        error("Email ou senha inválidos.");
+      }
+    } catch (err) {
+      setErro("Erro ao fazer login. Tente novamente.");
+      error("Erro ao fazer login. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -49,9 +89,17 @@ export default function Login() {
 
         <button
           type="submit"
-          className="bg-primario text-white font-semibold w-full py-2 rounded hover:bg-destaque hover:text-texto transition"
+          disabled={loading}
+          className="bg-primario text-white font-semibold w-full py-2 rounded hover:bg-destaque hover:text-texto transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Entrar
+          {loading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <span>Entrando...</span>
+            </>
+          ) : (
+            "Entrar"
+          )}
         </button>
 
         <p className="text-center text-gray-600 text-sm mt-4">
