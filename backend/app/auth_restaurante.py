@@ -30,6 +30,8 @@ def criar_token(dados: dict):
 
 async def get_current_restaurante(token: str = Depends(oauth2_scheme_restaurante), db: AsyncSession = Depends(get_db)):
     cred_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido ou expirado.", headers={"WWW-Authenticate":"Bearer"})
+    if not token:
+        raise cred_exception
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")

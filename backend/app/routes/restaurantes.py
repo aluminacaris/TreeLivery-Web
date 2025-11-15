@@ -107,6 +107,15 @@ async def login_restaurante(form_data: OAuth2PasswordRequestForm = Depends(), db
     access_token = auth_restaurante.criar_token({"sub": restaurante.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+# Rota para estatísticas do restaurante (DEVE VIR ANTES de /{restaurante_id})
+@router.get("/estatisticas")
+async def get_estatisticas(
+    current_restaurante: models.Restaurante = Depends(auth_restaurante.get_current_restaurante),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retorna estatísticas do restaurante logado"""
+    return await crud.get_estatisticas_restaurante(db, current_restaurante.restaurante_id)
+
 @router.get("/{restaurante_id}", response_model=schemas.RestauranteOut)
 async def get_restaurante(restaurante_id: UUID, db: AsyncSession = Depends(get_db)):
     rest = await crud.get_restaurant(db, restaurante_id) #busca no banco

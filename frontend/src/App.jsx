@@ -15,6 +15,7 @@ import LoginRestaurante from "./pages/LoginRestaurante";
 import CadastroRestaurante from "./pages/CadastroRestaurante";
 import PedidosRestaurante from "./pages/PedidosRestaurante";
 import MeusPedidos from "./pages/MeusPedidos";
+import DashboardRestaurante from "./pages/DashboardRestaurante";
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
               <Route element={<LayoutRestaurante protegidoRestaurante />}>
                 <Route path="/restaurantes-admin" element={<Restaurantes />} />
                 <Route path="/pedidos-restaurante" element={<PedidosRestaurante />} />
+                <Route path="/dashboard-restaurante" element={<DashboardRestaurante />} />
               </Route>
               </Routes>
             </CartProvider>

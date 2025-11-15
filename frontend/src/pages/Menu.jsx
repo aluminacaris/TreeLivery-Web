@@ -10,6 +10,7 @@ export default function Menu() {
   const { restauranteId } = useParams();
   const [pratos, setPratos] = useState([]);
   const [restaurante, setRestaurante] = useState(null);
+  const [avaliacoes, setAvaliacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [finalizando, setFinalizando] = useState(false);
@@ -25,12 +26,14 @@ export default function Menu() {
   async function carregarDados() {
     try {
       setLoading(true);
-      const [menuResponse, restauranteResponse] = await Promise.all([
+      const [menuResponse, restauranteResponse, avaliacoesResponse] = await Promise.all([
         axios.get(`http://localhost:8000/restaurantes/${restauranteId}/menu`),
-        axios.get(`http://localhost:8000/restaurantes/${restauranteId}`)
+        axios.get(`http://localhost:8000/restaurantes/${restauranteId}`),
+        axios.get(`http://localhost:8000/avaliacoes/restaurante/${restauranteId}`).catch(() => ({ data: [] }))
       ]);
       setPratos(menuResponse.data);
       setRestaurante(restauranteResponse.data);
+      setAvaliacoes(avaliacoesResponse.data || []);
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
       error("Erro ao carregar informações do restaurante.");
@@ -212,6 +215,61 @@ export default function Menu() {
               ← Voltar
             </button>
           </div>
+        </motion.div>
+      )}
+
+      {/* Seção de Avaliações */}
+      {restaurante && avaliacoes.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-100"
+        >
+          <h2 className="text-2xl font-bold text-primario mb-4 flex items-center gap-2">
+            <span>⭐</span>
+            <span>Avaliações dos Clientes</span>
+            {restaurante.avaliacao_media && Number(restaurante.avaliacao_media) > 0 && (
+              <span className="text-lg text-gray-600 font-normal">
+                ({Number(restaurante.avaliacao_media).toFixed(1)} de {avaliacoes.length} avaliação{avaliacoes.length !== 1 ? 'ões' : ''})
+              </span>
+            )}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+            {avaliacoes.slice(0, 10).map((avaliacao) => (
+              <div
+                key={avaliacao.avaliacao_id}
+                className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={`text-lg ${
+                          star <= avaliacao.nota ? "text-yellow-400" : "text-gray-300"
+                        }`}
+                      >
+                        ⭐
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    {new Date(avaliacao.criado_em).toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
+                {avaliacao.comentario && (
+                  <p className="text-sm text-gray-700 italic">
+                    "{avaliacao.comentario}"
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          {avaliacoes.length > 10 && (
+            <p className="text-sm text-gray-500 mt-4 text-center">
+              Mostrando 10 de {avaliacoes.length} avaliações
+            </p>
+          )}
         </motion.div>
       )}
 

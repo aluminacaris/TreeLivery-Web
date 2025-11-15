@@ -18,6 +18,12 @@ export default function NavbarRestaurante() {
       {restaurante ? (
         <div className="flex items-center gap-4">
           <button
+            onClick={() => navigate("/dashboard-restaurante")}
+            className="px-3 py-1.5 rounded-lg bg-white/20 text-white font-medium text-sm hover:bg-white/30 transition"
+          >
+            📊 Dashboard
+          </button>
+          <button
             onClick={() => navigate("/restaurantes-admin")}
             className="px-3 py-1.5 rounded-lg bg-white/20 text-white font-medium text-sm hover:bg-white/30 transition"
           >

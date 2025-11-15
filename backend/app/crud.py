@@ -292,3 +292,102 @@ async def atualizar_media_avaliacoes_restaurante(db: AsyncSession, restaurante_i
         restaurante.avaliacao_media = float(media) if media else 0.0
         await db.commit()
         await db.refresh(restaurante)
+
+# ========== ESTATÍSTICAS ==========
+
+async def get_estatisticas_restaurante(db: AsyncSession, restaurante_id: UUID):
+    from .models import Pedido, ItemPedido, Prato, Avaliacao
+    from datetime import datetime, timedelta
+    
+    # Total de pedidos
+    total_pedidos_result = await db.execute(
+        sa.select(sa.func.count(Pedido.pedido_id))
+        .where(Pedido.restaurante_id == restaurante_id)
+    )
+    total_pedidos = total_pedidos_result.scalar() or 0
+    
+    # Pedidos por status
+    pedidos_por_status = {}
+    status_list = ["Recebido", "Em preparo", "Saiu para entrega", "Entregue", "Cancelado"]
+    for status in status_list:
+        result = await db.execute(
+            sa.select(sa.func.count(Pedido.pedido_id))
+            .where(
+                Pedido.restaurante_id == restaurante_id,
+                Pedido.status == status
+            )
+        )
+        pedidos_por_status[status] = result.scalar() or 0
+    
+    # Receita total
+    receita_result = await db.execute(
+        sa.select(sa.func.sum(Pedido.total))
+        .where(
+            Pedido.restaurante_id == restaurante_id,
+            Pedido.status == "Entregue"
+        )
+    )
+    receita_total = float(receita_result.scalar() or 0)
+    
+    # Receita do último mês
+    um_mes_atras = datetime.now() - timedelta(days=30)
+    receita_mes_result = await db.execute(
+        sa.select(sa.func.sum(Pedido.total))
+        .where(
+            Pedido.restaurante_id == restaurante_id,
+            Pedido.status == "Entregue",
+            Pedido.data_pedido >= um_mes_atras
+        )
+    )
+    receita_mes = float(receita_mes_result.scalar() or 0)
+    
+    # Média de pedidos por dia (últimos 30 dias)
+    pedidos_mes_result = await db.execute(
+        sa.select(sa.func.count(Pedido.pedido_id))
+        .where(
+            Pedido.restaurante_id == restaurante_id,
+            Pedido.data_pedido >= um_mes_atras
+        )
+    )
+    pedidos_mes = pedidos_mes_result.scalar() or 0
+    media_pedidos_dia = round(pedidos_mes / 30, 1) if pedidos_mes > 0 else 0
+    
+    # Pratos mais vendidos
+    pratos_vendidos_result = await db.execute(
+        sa.select(
+            ItemPedido.prato_id,
+            Prato.nome,
+            sa.func.sum(ItemPedido.quantidade).label('total_vendido')
+        )
+        .join(Prato, ItemPedido.prato_id == Prato.prato_id)
+        .join(Pedido, ItemPedido.pedido_id == Pedido.pedido_id)
+        .where(Pedido.restaurante_id == restaurante_id)
+        .group_by(ItemPedido.prato_id, Prato.nome)
+        .order_by(sa.desc('total_vendido'))
+        .limit(5)
+    )
+    pratos_mais_vendidos = [
+        {
+            "prato_id": str(row.prato_id),
+            "nome": row.nome,
+            "total_vendido": int(row.total_vendido)
+        }
+        for row in pratos_vendidos_result.all()
+    ]
+    
+    # Total de avaliações
+    total_avaliacoes_result = await db.execute(
+        sa.select(sa.func.count(Avaliacao.avaliacao_id))
+        .where(Avaliacao.restaurante_id == restaurante_id)
+    )
+    total_avaliacoes = total_avaliacoes_result.scalar() or 0
+    
+    return {
+        "total_pedidos": total_pedidos,
+        "pedidos_por_status": pedidos_por_status,
+        "receita_total": receita_total,
+        "receita_mes": receita_mes,
+        "media_pedidos_dia": media_pedidos_dia,
+        "pratos_mais_vendidos": pratos_mais_vendidos,
+        "total_avaliacoes": total_avaliacoes
+    }

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 
-function Card({ r, index }) {
+function Card({ r, index, isRecomendado }) {
   const navigate = useNavigate();
 
   return (
@@ -26,9 +27,16 @@ function Card({ r, index }) {
         )}
       </div>
       <div className="p-5">
-        <h3 className="font-bold text-xl text-primario mb-2 group-hover:text-destaque transition">
-          {r.nome_fantasia}
-        </h3>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className="font-bold text-xl text-primario group-hover:text-destaque transition">
+            {r.nome_fantasia}
+          </h3>
+          {isRecomendado && (
+            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">
+              ✅ Recomendado
+            </span>
+          )}
+        </div>
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">{r.descricao || "Sem descrição"}</p>
 
         <div className="flex flex-wrap gap-3 text-sm text-gray-700 pt-3 border-t border-gray-100">
@@ -62,9 +70,12 @@ function Card({ r, index }) {
 }
 
 export default function Home() {
+  const { usuario } = useAuth();
   const [rests, setRests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
+  const [ordenacao, setOrdenacao] = useState("recomendado"); // recomendado, nome, avaliacao, tempo, preco
+  const [freteGratis, setFreteGratis] = useState(false);
 
   useEffect(() => {
     axios
@@ -78,11 +89,73 @@ export default function Home() {
       });
   }, []);
 
-  const restaurantesFiltrados = rests.filter(r =>
-    busca === "" ||
-    r.nome_fantasia.toLowerCase().includes(busca.toLowerCase()) ||
-    r.descricao?.toLowerCase().includes(busca.toLowerCase())
-  );
+  // Filtros
+  const restaurantesFiltrados = rests.filter(r => {
+    const matchBusca = busca === "" ||
+      r.nome_fantasia.toLowerCase().includes(busca.toLowerCase()) ||
+      r.descricao?.toLowerCase().includes(busca.toLowerCase());
+    
+    const matchFreteGratis = !freteGratis || !r.taxa_entrega_base || Number(r.taxa_entrega_base) === 0;
+    
+    return matchBusca && matchFreteGratis;
+  });
+
+  // Função para calcular score de recomendação
+  function calcularScoreRecomendacao(restaurante) {
+    if (!usuario) return 0;
+    
+    let score = 0;
+    
+    // Restaurantes com boa avaliação ganham pontos
+    if (restaurante.avaliacao_media && Number(restaurante.avaliacao_media) >= 4) {
+      score += 10;
+    }
+    
+    // Frete grátis ganha pontos
+    if (!restaurante.taxa_entrega_base || Number(restaurante.taxa_entrega_base) === 0) {
+      score += 5;
+    }
+    
+    // Tempo de entrega menor ganha pontos
+    if (restaurante.tempo_medio_entrega && restaurante.tempo_medio_entrega <= 30) {
+      score += 5;
+    }
+    
+    return score;
+  }
+
+  // Ordenação
+  const restaurantesOrdenados = [...restaurantesFiltrados].sort((a, b) => {
+    switch (ordenacao) {
+      case "recomendado":
+        const scoreA = calcularScoreRecomendacao(a);
+        const scoreB = calcularScoreRecomendacao(b);
+        if (scoreB !== scoreA) return scoreB - scoreA; // Maior score primeiro
+        // Em caso de empate, ordena por avaliação
+        const avalA = Number(a.avaliacao_media) || 0;
+        const avalB = Number(b.avaliacao_media) || 0;
+        return avalB - avalA;
+      
+      case "avaliacao":
+        const avalA2 = Number(a.avaliacao_media) || 0;
+        const avalB2 = Number(b.avaliacao_media) || 0;
+        return avalB2 - avalA2; // Maior para menor
+      
+      case "tempo":
+        const tempoA = a.tempo_medio_entrega || 999;
+        const tempoB = b.tempo_medio_entrega || 999;
+        return tempoA - tempoB; // Menor para maior
+      
+      case "preco":
+        const precoA = Number(a.taxa_entrega_base) || 0;
+        const precoB = Number(b.taxa_entrega_base) || 0;
+        return precoA - precoB; // Menor para maior
+      
+      case "nome":
+      default:
+        return a.nome_fantasia.localeCompare(b.nome_fantasia);
+    }
+  });
 
   if (loading) {
     return (
@@ -103,8 +176,8 @@ export default function Home() {
           <p className="text-gray-600">Descubra os melhores sabores perto de você</p>
         </div>
 
-        {/* Busca */}
-        <div className="mb-6">
+        {/* Busca e Filtros */}
+        <div className="mb-6 space-y-4">
           <input
             type="text"
             placeholder="🔍 Buscar restaurantes..."
@@ -112,9 +185,51 @@ export default function Home() {
             onChange={(e) => setBusca(e.target.value)}
             className="w-full px-4 py-3 border border-secundario rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
           />
+          
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Ordenação */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Ordenar por:</label>
+              <select
+                value={ordenacao}
+                onChange={(e) => setOrdenacao(e.target.value)}
+                className="px-3 py-2 border border-secundario rounded-lg focus:outline-none focus:ring-2 focus:ring-primario text-sm"
+              >
+                {usuario && <option value="recomendado">✨ Recomendados</option>}
+                <option value="nome">Nome (A-Z)</option>
+                <option value="avaliacao">⭐ Melhor Avaliação</option>
+                <option value="tempo">⏱️ Menor Tempo</option>
+                <option value="preco">💰 Menor Taxa</option>
+              </select>
+            </div>
+
+            {/* Filtro Frete Grátis */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={freteGratis}
+                onChange={(e) => setFreteGratis(e.target.checked)}
+                className="w-4 h-4 text-primario border-secundario rounded focus:ring-primario"
+              />
+              <span className="text-sm font-medium text-gray-700">🆓 Apenas frete grátis</span>
+            </label>
+
+            {/* Limpar Filtros */}
+            {(busca !== "" || freteGratis) && (
+              <button
+                onClick={() => {
+                  setBusca("");
+                  setFreteGratis(false);
+                }}
+                className="text-sm text-primario hover:underline"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
         </div>
 
-        {restaurantesFiltrados.length === 0 ? (
+        {restaurantesOrdenados.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">🔍</div>
             <p className="text-gray-600 text-lg mb-2 font-medium">
@@ -134,12 +249,20 @@ export default function Home() {
         ) : (
           <>
             <p className="text-sm text-gray-600 mb-4">
-              {restaurantesFiltrados.length} restaurante{restaurantesFiltrados.length !== 1 ? 's' : ''} encontrado{restaurantesFiltrados.length !== 1 ? 's' : ''}
+              {restaurantesOrdenados.length} restaurante{restaurantesOrdenados.length !== 1 ? 's' : ''} encontrado{restaurantesOrdenados.length !== 1 ? 's' : ''}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {restaurantesFiltrados.map((r, index) => (
-                <Card key={r.restaurante_id} r={r} index={index} />
-              ))}
+              {restaurantesOrdenados.map((r, index) => {
+                const isRecomendado = usuario && calcularScoreRecomendacao(r) >= 10;
+                return (
+                  <Card 
+                    key={r.restaurante_id} 
+                    r={r} 
+                    index={index} 
+                    isRecomendado={isRecomendado}
+                  />
+                );
+              })}
             </div>
           </>
         )}
