@@ -39,6 +39,10 @@ export function AuthProvider({ children }) {
     }
   }
 
+  function atualizarUsuario(dados) {
+    setUsuario((prev) => ({ ...prev, ...dados }));
+  }
+
   async function login(email, senha) {
     console.log("🚀 Tentando login com:", email);
     try {
@@ -71,7 +75,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ usuario, token, loading, login, logout, carregarUsuario, atualizarUsuario }}>
       {children}
     </AuthContext.Provider>
   );

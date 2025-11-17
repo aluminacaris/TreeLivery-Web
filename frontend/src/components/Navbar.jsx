@@ -24,6 +24,13 @@ export default function Navbar() {
             <span>📦</span>
             <span>Meus Pedidos</span>
           </button>
+          <button
+            onClick={() => navigate("/perfil")}
+            className="px-4 py-1.5 rounded-full bg-white text-primario font-semibold text-sm hover:bg-primario hover:text-white transition duration-200 shadow-sm border border-primario flex items-center gap-2"
+          >
+            <span>👤</span>
+            <span className="hidden sm:inline">Perfil</span>
+          </button>
           <span className="font-medium hidden sm:inline">
             Olá, <span className="font-semibold">{usuario.nome}</span> 👋
           </span>

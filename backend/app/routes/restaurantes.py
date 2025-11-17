@@ -23,6 +23,42 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def get_me(current_restaurante: models.Restaurante = Depends(auth_restaurante.get_current_restaurante)):
     return current_restaurante
 
+# 🟢 Rota para atualizar dados do restaurante logado
+@router.put("/me", response_model=schemas.RestauranteOut)
+async def atualizar_me(
+    payload: schemas.RestauranteUpdate,
+    current_restaurante: models.Restaurante = Depends(auth_restaurante.get_current_restaurante),
+    db: AsyncSession = Depends(get_db)
+):
+    """Atualiza os dados do restaurante logado"""
+    restaurante_atualizado = await crud.update_restaurant(db, current_restaurante.restaurante_id, payload)
+    if not restaurante_atualizado:
+        raise HTTPException(status_code=404, detail="Restaurante não encontrado")
+    return restaurante_atualizado
+
+# 🟢 Rota para alterar senha do restaurante logado
+@router.put("/me/senha")
+async def alterar_senha(
+    payload: schemas.RestauranteAlterarSenha,
+    current_restaurante: models.Restaurante = Depends(auth_restaurante.get_current_restaurante),
+    db: AsyncSession = Depends(get_db)
+):
+    """Altera a senha do restaurante logado"""
+    try:
+        restaurante_atualizado = await crud.alterar_senha_restaurante(
+            db, 
+            current_restaurante.restaurante_id, 
+            payload.senha_atual, 
+            payload.senha_nova
+        )
+        if not restaurante_atualizado:
+            raise HTTPException(status_code=404, detail="Restaurante não encontrado")
+        return {"message": "Senha alterada com sucesso"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.get("/", response_model=list[schemas.RestauranteOut]) 
 async def list_restaurantes(db: AsyncSession = Depends(get_db)):
     rests = await crud.get_restaurants(db)

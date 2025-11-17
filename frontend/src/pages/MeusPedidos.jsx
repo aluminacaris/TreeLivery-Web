@@ -16,7 +16,8 @@ export default function MeusPedidos() {
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [busca, setBusca] = useState("");
   const [avaliandoPedido, setAvaliandoPedido] = useState(null);
-  const [formAvaliacao, setFormAvaliacao] = useState({ nota: 5, comentario: "" });
+  const [formAvaliacao, setFormAvaliacao] = useState({ nota: 0, comentario: "" });
+  const [hoverNota, setHoverNota] = useState(0);
 
   useEffect(() => {
     if (usuario?.usuario_id) {
@@ -78,7 +79,8 @@ export default function MeusPedidos() {
       });
       success("Avaliação enviada com sucesso!");
       setAvaliandoPedido(null);
-      setFormAvaliacao({ nota: 5, comentario: "" });
+      setFormAvaliacao({ nota: 0, comentario: "" });
+      setHoverNota(0);
       carregarPedidos(); // Recarrega para atualizar avaliações
     } catch (err) {
       console.error("Erro ao enviar avaliação:", err);
@@ -351,24 +353,38 @@ export default function MeusPedidos() {
                           <h5 className="font-semibold text-esc">Avaliar pedido</h5>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Nota (1 a 5 estrelas)
+                              Nota (1 a 5 estrelas) {formAvaliacao.nota > 0 && `- ${formAvaliacao.nota} estrela${formAvaliacao.nota !== 1 ? 's' : ''}`}
                             </label>
-                            <div className="flex gap-2">
-                              {[1, 2, 3, 4, 5].map((nota) => (
-                                <button
-                                  key={nota}
-                                  type="button"
-                                  onClick={() => setFormAvaliacao({ ...formAvaliacao, nota })}
-                                  className={`text-2xl transition ${
-                                    formAvaliacao.nota >= nota
-                                      ? "text-yellow-400"
-                                      : "text-gray-300"
-                                  }`}
-                                >
-                                  ⭐
-                                </button>
-                              ))}
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map((nota) => {
+                                // Usa hoverNota se estiver hover, senão usa formAvaliacao.nota
+                                const notaAtiva = hoverNota > 0 ? hoverNota : formAvaliacao.nota;
+                                const estaPreenchida = nota <= notaAtiva;
+                                
+                                return (
+                                  <button
+                                    key={nota}
+                                    type="button"
+                                    onClick={() => setFormAvaliacao({ ...formAvaliacao, nota })}
+                                    onMouseEnter={() => setHoverNota(nota)}
+                                    onMouseLeave={() => setHoverNota(0)}
+                                    className={`text-3xl transition-all transform hover:scale-110 ${
+                                      estaPreenchida
+                                        ? "text-yellow-400 drop-shadow-md"
+                                        : "text-gray-300 hover:text-yellow-200"
+                                    }`}
+                                    title={`${nota} estrela${nota !== 1 ? 's' : ''}`}
+                                  >
+                                    {estaPreenchida ? "⭐" : "☆"}
+                                  </button>
+                                );
+                              })}
                             </div>
+                            {formAvaliacao.nota === 0 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Clique nas estrelas para avaliar
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -387,14 +403,16 @@ export default function MeusPedidos() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => enviarAvaliacao(pedido.pedido_id)}
-                              className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-destaque transition font-medium"
+                              disabled={formAvaliacao.nota === 0}
+                              className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-destaque transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Enviar Avaliação
                             </button>
                             <button
                               onClick={() => {
                                 setAvaliandoPedido(null);
-                                setFormAvaliacao({ nota: 5, comentario: "" });
+                                setFormAvaliacao({ nota: 0, comentario: "" });
+                                setHoverNota(0);
                               }}
                               className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-medium"
                             >
@@ -404,7 +422,11 @@ export default function MeusPedidos() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => setAvaliandoPedido(pedido.pedido_id)}
+                          onClick={() => {
+                            setAvaliandoPedido(pedido.pedido_id);
+                            setFormAvaliacao({ nota: 0, comentario: "" });
+                            setHoverNota(0);
+                          }}
                           className="w-full bg-primario text-white px-4 py-2 rounded-lg hover:bg-destaque transition font-medium flex items-center justify-center gap-2"
                         >
                           <span>⭐</span>

@@ -45,6 +45,50 @@ async def create_restaurant(db: AsyncSession, payload: schemas.RestauranteCreate
     await db.refresh(restaurante)
     return restaurante
 
+async def update_restaurant(db: AsyncSession, restaurante_id: UUID, payload: schemas.RestauranteUpdate):
+    """Atualiza os dados de um restaurante"""
+    restaurante = await get_restaurant(db, restaurante_id)
+    if not restaurante:
+        return None
+    
+    # Atualiza apenas os campos fornecidos
+    if payload.nome_fantasia is not None:
+        restaurante.nome_fantasia = payload.nome_fantasia
+    if payload.razao_social is not None:
+        restaurante.razao_social = payload.razao_social
+    if payload.descricao is not None:
+        restaurante.descricao = payload.descricao
+    if payload.telefone is not None:
+        restaurante.telefone = payload.telefone
+    if payload.tempo_medio_entrega is not None:
+        restaurante.tempo_medio_entrega = payload.tempo_medio_entrega
+    if payload.taxa_entrega_base is not None:
+        restaurante.taxa_entrega_base = payload.taxa_entrega_base
+    if payload.endereco is not None:
+        restaurante.endereco = payload.endereco.dict()
+    
+    await db.commit()
+    await db.refresh(restaurante)
+    return restaurante
+
+async def alterar_senha_restaurante(db: AsyncSession, restaurante_id: UUID, senha_atual: str, senha_nova: str):
+    """Altera a senha do restaurante"""
+    from .auth import verificar_senha, gerar_hash
+    
+    restaurante = await get_restaurant(db, restaurante_id)
+    if not restaurante:
+        return None
+    
+    # Verifica se a senha atual está correta
+    if not verificar_senha(senha_atual, restaurante.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    
+    # Atualiza a senha
+    restaurante.senha_hash = gerar_hash(senha_nova)
+    await db.commit()
+    await db.refresh(restaurante)
+    return restaurante
+
 async def get_menu(db: AsyncSession, restaurante_id: UUID): #mostra os pratos disponiveis de um restaurante
     q = await db.execute(select(models.Prato).where(models.Prato.restaurante_id==restaurante_id, models.Prato.disponivel==True))
     return q.scalars().all() #mostra todos os pratos disponiveis
@@ -209,6 +253,44 @@ async def criar_usuario(db: AsyncSession, usuario: schemas.UsuarioCreate):
     await db.commit()
     await db.refresh(novo_usuario)
     return novo_usuario
+
+async def update_usuario(db: AsyncSession, usuario_id: UUID, payload: schemas.UsuarioUpdate):
+    """Atualiza os dados de um usuário"""
+    usuario = await db.get(models.Usuario, usuario_id)
+    if not usuario:
+        return None
+    
+    # Atualiza apenas os campos fornecidos
+    if payload.nome is not None:
+        usuario.nome = payload.nome
+    if payload.tipo_dieta is not None:
+        usuario.tipo_dieta = payload.tipo_dieta
+    if payload.restricoes is not None:
+        usuario.restricoes = payload.restricoes
+    if payload.seletividade is not None:
+        usuario.seletividade = payload.seletividade
+    
+    await db.commit()
+    await db.refresh(usuario)
+    return usuario
+
+async def alterar_senha_usuario(db: AsyncSession, usuario_id: UUID, senha_atual: str, senha_nova: str):
+    """Altera a senha do usuário"""
+    from .auth import verificar_senha, gerar_hash
+    
+    usuario = await db.get(models.Usuario, usuario_id)
+    if not usuario:
+        return None
+    
+    # Verifica se a senha atual está correta
+    if not verificar_senha(senha_atual, usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    
+    # Atualiza a senha
+    usuario.senha_hash = gerar_hash(senha_nova)
+    await db.commit()
+    await db.refresh(usuario)
+    return usuario
 
 # ========== AVALIAÇÕES ==========
 

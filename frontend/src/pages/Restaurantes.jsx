@@ -27,6 +27,30 @@ export default function RestaurantesAdmin() {
   const [editandoFoto, setEditandoFoto] = useState(false);
   const [novaFoto, setNovaFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState(null);
+  const [editandoPerfil, setEditandoPerfil] = useState(false);
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
+  const [formSenha, setFormSenha] = useState({
+    senha_atual: "",
+    senha_nova: "",
+    senha_nova_confirmacao: "",
+  });
+  const [formPerfil, setFormPerfil] = useState({
+    nome_fantasia: "",
+    razao_social: "",
+    descricao: "",
+    telefone: "",
+    tempo_medio_entrega: "",
+    taxa_entrega_base: "",
+    endereco: {
+      cep: "",
+      logradouro: "",
+      numero: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      complemento: ""
+    }
+  });
 
   const restricoesDisponiveis = [
     "glúten",
@@ -246,9 +270,82 @@ export default function RestaurantesAdmin() {
     return matchBusca && matchDisponivel;
   });
 
+  // Inicializar formulário de perfil quando restaurante carregar
   useEffect(() => {
-    if (restaurante) fetchPratos();
+    if (restaurante) {
+      fetchPratos();
+      setFormPerfil({
+        nome_fantasia: restaurante.nome_fantasia || "",
+        razao_social: restaurante.razao_social || "",
+        descricao: restaurante.descricao || "",
+        telefone: restaurante.telefone || "",
+        tempo_medio_entrega: restaurante.tempo_medio_entrega?.toString() || "",
+        taxa_entrega_base: restaurante.taxa_entrega_base?.toString() || "",
+        endereco: restaurante.endereco || {
+          cep: "",
+          logradouro: "",
+          numero: "",
+          bairro: "",
+          cidade: "",
+          estado: "",
+          complemento: ""
+        }
+      });
+    }
   }, [restaurante]);
+
+  // Atualizar perfil do restaurante
+  async function atualizarPerfil() {
+    try {
+      setSalvando(true);
+      const token = localStorage.getItem("restaurante_token");
+      
+      const payload = {};
+      
+      // Adiciona apenas campos que foram preenchidos
+      if (formPerfil.nome_fantasia && formPerfil.nome_fantasia.trim()) {
+        payload.nome_fantasia = formPerfil.nome_fantasia.trim();
+      }
+      if (formPerfil.razao_social && formPerfil.razao_social.trim()) {
+        payload.razao_social = formPerfil.razao_social.trim();
+      }
+      if (formPerfil.descricao !== undefined) {
+        payload.descricao = formPerfil.descricao.trim() || null;
+      }
+      if (formPerfil.telefone && formPerfil.telefone.trim()) {
+        payload.telefone = formPerfil.telefone.trim();
+      }
+      if (formPerfil.tempo_medio_entrega && formPerfil.tempo_medio_entrega.trim()) {
+        payload.tempo_medio_entrega = parseInt(formPerfil.tempo_medio_entrega);
+      }
+      if (formPerfil.taxa_entrega_base && formPerfil.taxa_entrega_base.trim()) {
+        payload.taxa_entrega_base = parseFloat(formPerfil.taxa_entrega_base);
+      }
+      if (formPerfil.endereco && Object.values(formPerfil.endereco).some(v => v && v.trim())) {
+        payload.endereco = formPerfil.endereco;
+      }
+
+      const res = await axios.put(
+        "http://localhost:8000/restaurantes/me",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      atualizarRestaurante(res.data);
+      success("Perfil atualizado com sucesso!");
+      setEditandoPerfil(false);
+    } catch (err) {
+      console.error("Erro ao atualizar perfil:", err);
+      const errorMsg = err.response?.data?.detail || "Erro ao atualizar perfil. Tente novamente.";
+      error(errorMsg);
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   if (loading)
     return (
@@ -298,11 +395,234 @@ export default function RestaurantesAdmin() {
                 </div>
 
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-esc mb-1">
-                    {restaurante.nome_fantasia}
-                  </h3>
-                  {restaurante.descricao && (
-                    <p className="text-gray-600">{restaurante.descricao}</p>
+                  {!editandoPerfil ? (
+                    <>
+                      <h3 className="text-2xl font-bold text-esc mb-1">
+                        {restaurante.nome_fantasia}
+                      </h3>
+                      {restaurante.descricao && (
+                        <p className="text-gray-600">{restaurante.descricao}</p>
+                      )}
+                      {restaurante.telefone && (
+                        <p className="text-sm text-gray-500 mt-1">📞 {restaurante.telefone}</p>
+                      )}
+                      {restaurante.endereco && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          📍 {restaurante.endereco.logradouro}, {restaurante.endereco.numero} - {restaurante.endereco.bairro}, {restaurante.endereco.cidade}/{restaurante.endereco.estado}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Nome Fantasia"
+                        value={formPerfil.nome_fantasia}
+                        onChange={(e) => setFormPerfil({ ...formPerfil, nome_fantasia: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Razão Social"
+                        value={formPerfil.razao_social}
+                        onChange={(e) => setFormPerfil({ ...formPerfil, razao_social: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                      />
+                      <textarea
+                        placeholder="Descrição"
+                        value={formPerfil.descricao}
+                        onChange={(e) => setFormPerfil({ ...formPerfil, descricao: e.target.value })}
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                        rows="2"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Telefone (ex: (11) 98765-4321)"
+                        value={formPerfil.telefone}
+                        onChange={(e) => {
+                          let value = e.target.value.replace(/\D/g, '');
+                          if (value.length <= 11) {
+                            if (value.length <= 2) {
+                              value = value ? `(${value}` : '';
+                            } else if (value.length <= 7) {
+                              value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                            } else if (value.length <= 10) {
+                              value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+                            } else {
+                              value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+                            }
+                            setFormPerfil({ ...formPerfil, telefone: value });
+                          }
+                        }}
+                        maxLength={15}
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          placeholder="Tempo médio (min)"
+                          min="1"
+                          max="300"
+                          value={formPerfil.tempo_medio_entrega}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || (parseInt(value) >= 1 && parseInt(value) <= 300)) {
+                              setFormPerfil({ ...formPerfil, tempo_medio_entrega: value });
+                            }
+                          }}
+                          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                        />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Taxa entrega (R$)"
+                          value={formPerfil.taxa_entrega_base}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || parseFloat(value) >= 0) {
+                              setFormPerfil({ ...formPerfil, taxa_entrega_base: value });
+                            }
+                          }}
+                          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                        />
+                      </div>
+                      <div className="border-t pt-3 mt-3">
+                        <p className="text-sm font-semibold mb-2 text-gray-700">Endereço:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="CEP (ex: 12345-678)"
+                            value={formPerfil.endereco.cep}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length <= 8) {
+                                if (value.length > 5) {
+                                  value = `${value.slice(0, 5)}-${value.slice(5)}`;
+                                }
+                                setFormPerfil({ 
+                                  ...formPerfil, 
+                                  endereco: { ...formPerfil.endereco, cep: value }
+                                });
+                              }
+                            }}
+                            maxLength={9}
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Estado (ex: SP)"
+                            value={formPerfil.endereco.estado}
+                            onChange={(e) => {
+                              const value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+                              setFormPerfil({ 
+                                ...formPerfil, 
+                                endereco: { ...formPerfil.endereco, estado: value }
+                              });
+                            }}
+                            maxLength={2}
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Logradouro"
+                          value={formPerfil.endereco.logradouro}
+                          onChange={(e) => setFormPerfil({ 
+                            ...formPerfil, 
+                            endereco: { ...formPerfil.endereco, logradouro: e.target.value }
+                          })}
+                          className="w-full p-2 border rounded-lg mt-2 focus:ring-2 focus:ring-primario"
+                        />
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <input
+                            type="text"
+                            placeholder="Número"
+                            value={formPerfil.endereco.numero}
+                            onChange={(e) => setFormPerfil({ 
+                              ...formPerfil, 
+                              endereco: { ...formPerfil.endereco, numero: e.target.value }
+                            })}
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Bairro"
+                            value={formPerfil.endereco.bairro}
+                            onChange={(e) => setFormPerfil({ 
+                              ...formPerfil, 
+                              endereco: { ...formPerfil.endereco, bairro: e.target.value }
+                            })}
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Cidade"
+                          value={formPerfil.endereco.cidade}
+                          onChange={(e) => setFormPerfil({ 
+                            ...formPerfil, 
+                            endereco: { ...formPerfil.endereco, cidade: e.target.value }
+                          })}
+                          className="w-full p-2 border rounded-lg mt-2 focus:ring-2 focus:ring-primario"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Complemento (opcional)"
+                          value={formPerfil.endereco.complemento}
+                          onChange={(e) => setFormPerfil({ 
+                            ...formPerfil, 
+                            endereco: { ...formPerfil.endereco, complemento: e.target.value }
+                          })}
+                          className="w-full p-2 border rounded-lg mt-2 focus:ring-2 focus:ring-primario"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={atualizarPerfil}
+                          disabled={salvando}
+                          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {salvando ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Salvando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>✅</span>
+                              <span>Salvar</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditandoPerfil(false);
+                            // Restaura valores originais
+                            setFormPerfil({
+                              nome_fantasia: restaurante.nome_fantasia || "",
+                              razao_social: restaurante.razao_social || "",
+                              descricao: restaurante.descricao || "",
+                              telefone: restaurante.telefone || "",
+                              tempo_medio_entrega: restaurante.tempo_medio_entrega?.toString() || "",
+                              taxa_entrega_base: restaurante.taxa_entrega_base?.toString() || "",
+                              endereco: restaurante.endereco || {
+                                cep: "",
+                                logradouro: "",
+                                numero: "",
+                                bairro: "",
+                                cidade: "",
+                                estado: "",
+                                complemento: ""
+                              }
+                            });
+                          }}
+                          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-medium"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
                   )}
                   
                   {/* Formulário de edição de foto */}
@@ -349,20 +669,163 @@ export default function RestaurantesAdmin() {
                 </div>
               </div>
               
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="bg-primario/10 text-primario px-3 py-1 rounded-lg">
-                  <span className="font-semibold">{pratos.length}</span> prato{pratos.length !== 1 ? 's' : ''}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="bg-primario/10 text-primario px-3 py-1 rounded-lg">
+                    <span className="font-semibold">{pratos.length}</span> prato{pratos.length !== 1 ? 's' : ''}
+                  </div>
+                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-lg">
+                    <span className="font-semibold">
+                      {pratos.filter(p => p.disponivel).length}
+                    </span> disponível{pratos.filter(p => p.disponivel).length !== 1 ? 'is' : ''}
+                  </div>
                 </div>
-                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-lg">
-                  <span className="font-semibold">
-                    {pratos.filter(p => p.disponivel).length}
-                  </span> disponível{pratos.filter(p => p.disponivel).length !== 1 ? 'is' : ''}
+                <div className="flex flex-col gap-2">
+                  {!editandoPerfil && (
+                    <button
+                      onClick={() => setEditandoPerfil(true)}
+                      className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-destaque transition font-medium flex items-center gap-2 text-sm"
+                    >
+                      <span>✏️</span>
+                      <span>Editar Perfil</span>
+                    </button>
+                  )}
+                  {!alterandoSenha && (
+                    <button
+                      onClick={() => setAlterandoSenha(true)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-medium flex items-center gap-2 text-sm"
+                    >
+                      <span>🔒</span>
+                      <span>Alterar Senha</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Modal de Alteração de Senha do Restaurante */}
+      {alterandoSenha && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
+          >
+            <h3 className="text-xl font-bold text-esc mb-4">🔒 Alterar Senha</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Senha Atual
+                </label>
+                <input
+                  type="password"
+                  value={formSenha.senha_atual}
+                  onChange={(e) => setFormSenha({ ...formSenha, senha_atual: e.target.value })}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                  placeholder="Digite sua senha atual"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={formSenha.senha_nova}
+                  onChange={(e) => setFormSenha({ ...formSenha, senha_nova: e.target.value })}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                  placeholder="Digite sua nova senha (mínimo 6 caracteres)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirmar Nova Senha
+                </label>
+                <input
+                  type="password"
+                  value={formSenha.senha_nova_confirmacao}
+                  onChange={(e) => setFormSenha({ ...formSenha, senha_nova_confirmacao: e.target.value })}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                  placeholder="Confirme sua nova senha"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={async () => {
+                    if (formSenha.senha_nova !== formSenha.senha_nova_confirmacao) {
+                      error("As senhas não coincidem!");
+                      return;
+                    }
+                    if (formSenha.senha_nova.length < 6) {
+                      error("A nova senha deve ter pelo menos 6 caracteres!");
+                      return;
+                    }
+                    try {
+                      setSalvando(true);
+                      const token = localStorage.getItem("restaurante_token");
+                      await axios.put(
+                        "http://localhost:8000/restaurantes/me/senha",
+                        {
+                          senha_atual: formSenha.senha_atual,
+                          senha_nova: formSenha.senha_nova,
+                        },
+                        {
+                          headers: {
+                            Authorization: `Bearer ${token}`,
+                          },
+                        }
+                      );
+                      success("Senha alterada com sucesso!");
+                      setAlterandoSenha(false);
+                      setFormSenha({
+                        senha_atual: "",
+                        senha_nova: "",
+                        senha_nova_confirmacao: "",
+                      });
+                    } catch (err) {
+                      console.error("Erro ao alterar senha:", err);
+                      const errorMsg = err.response?.data?.detail || "Erro ao alterar senha. Tente novamente.";
+                      error(errorMsg);
+                    } finally {
+                      setSalvando(false);
+                    }
+                  }}
+                  disabled={salvando}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {salvando ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Alterando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✅</span>
+                      <span>Alterar Senha</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setAlterandoSenha(false);
+                    setFormSenha({
+                      senha_atual: "",
+                      senha_nova: "",
+                      senha_nova_confirmacao: "",
+                    });
+                  }}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

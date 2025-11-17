@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useAuthRestaurante } from "../context/AuthRestauranteContext";
 import { motion } from "framer-motion";
 import { useToast } from "../context/ToastContext";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 export default function PedidosRestaurante() {
   const { restaurante } = useAuthRestaurante();
@@ -12,12 +13,6 @@ export default function PedidosRestaurante() {
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [busca, setBusca] = useState("");
-
-  useEffect(() => {
-    if (restaurante?.restaurante_id) {
-      carregarPedidos();
-    }
-  }, [restaurante]);
 
   async function carregarPedidos() {
     try {
@@ -48,6 +43,28 @@ export default function PedidosRestaurante() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (restaurante?.restaurante_id) {
+      carregarPedidos();
+    }
+  }, [restaurante]);
+
+  // WebSocket para notificações em tempo real
+  const wsUrl = restaurante?.restaurante_id 
+    ? `http://localhost:8000/ws/restaurante/${restaurante.restaurante_id}`
+    : null;
+
+  const handleWebSocketMessage = useCallback((data) => {
+    if (data.type === 'novo_pedido') {
+      success(`🎉 Novo pedido recebido! Total: R$ ${data.total.toFixed(2)}`);
+      // Recarrega a lista de pedidos
+      carregarPedidos();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [success]); // carregarPedidos é estável, não precisa estar nas dependências
+
+  const { isConnected } = useWebSocket(wsUrl, handleWebSocketMessage);
 
   async function atualizarStatus(pedidoId, novoStatus) {
     try {
@@ -119,7 +136,20 @@ export default function PedidosRestaurante() {
       <div className="mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
-            <h2 className="text-3xl font-bold text-primario mb-1">📦 Gerenciar Pedidos</h2>
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-3xl font-bold text-primario">📦 Gerenciar Pedidos</h2>
+              {isConnected ? (
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Online
+                </span>
+              ) : (
+                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                  Offline
+                </span>
+              )}
+            </div>
             <p className="text-gray-600 text-sm">
               {pedidos.length === 0 
                 ? "Nenhum pedido encontrado" 

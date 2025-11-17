@@ -45,28 +45,44 @@ TreeLivery é uma plataforma de delivery que conecta usuários a restaurantes, o
 - **Tailwind CSS** - Framework CSS utility-first
 - **Axios** - Cliente HTTP
 - **Framer Motion** - Biblioteca de animações
+- **WebSocket** - Comunicação em tempo real para notificações
+
+## 🆕 Funcionalidades Recentes
+
+- **Notificações em Tempo Real**: Restaurantes recebem notificações instantâneas quando novos pedidos são criados via WebSocket
+- **Gestão de Perfil**: Usuários e restaurantes podem editar seus perfis e alterar senhas
+- **Validações Inteligentes**: Sistema valida e formata automaticamente telefones, CEPs e estados
+- **Compatibilidade de Restrições**: Sistema inteligente que compara restrições alimentares de forma precisa, evitando falsos positivos
 
 ## ✨ Funcionalidades
 
 ### Para Usuários
 - ✅ Cadastro e autenticação
 - ✅ Perfil personalizado com tipo de dieta, restrições e seletividade
+- ✅ **Edição de perfil** (nome, tipo de dieta, restrições, seletividade)
+- ✅ **Alteração de senha**
 - ✅ Visualização de restaurantes disponíveis
 - ✅ Visualização de cardápios e pratos
+- ✅ Sistema inteligente de compatibilidade de restrições alimentares
 - ✅ Sistema de carrinho de compras
 - ✅ Realização de pedidos
 - ✅ Acompanhamento de pedidos
-- ✅ Sistema de avaliações (nota e comentário)
+- ✅ Sistema de avaliações (nota e comentário) com interface intuitiva
 - ✅ Histórico de pedidos
 
 ### Para Restaurantes
 - ✅ Cadastro e autenticação
-- ✅ Dashboard administrativo
+- ✅ Dashboard administrativo com estatísticas
+- ✅ **Edição de perfil** (nome, descrição, telefone, endereço, tempo de entrega, taxa)
+- ✅ **Alteração de senha**
 - ✅ CRUD completo de pratos (criar, editar, deletar, listar)
 - ✅ Upload de imagens para pratos
+- ✅ Upload de foto de perfil
 - ✅ Visualização de pedidos recebidos
 - ✅ Atualização de status dos pedidos
+- ✅ **Notificações em tempo real** para novos pedidos (WebSocket)
 - ✅ Visualização de avaliações recebidas
+- ✅ Validações de dados (telefone, CEP, estado)
 
 ## 📁 Estrutura do Projeto
 
@@ -87,7 +103,8 @@ treelivery/
 │   │   ├── database.py      # Configuração do banco
 │   │   ├── main.py          # Aplicação FastAPI
 │   │   ├── models.py        # Modelos SQLAlchemy
-│   │   └── schemas.py       # Schemas Pydantic
+│   │   ├── schemas.py       # Schemas Pydantic
+│   │   └── websocket_manager.py  # Gerenciador de conexões WebSocket
 │   ├── Dockerfile
 │   └── requirements.txt
 │
@@ -114,7 +131,10 @@ treelivery/
     │   │   ├── LoginRestaurante.jsx
     │   │   ├── CadastroRestaurante.jsx
     │   │   ├── MeusPedidos.jsx
-    │   │   └── PedidosRestaurante.jsx
+    │   │   ├── PedidosRestaurante.jsx
+    │   │   └── PerfilUsuario.jsx
+    │   ├── hooks/            # Custom hooks
+    │   │   └── useWebSocket.js
     │   ├── App.jsx
     │   ├── main.jsx
     │   └── index.css
@@ -214,36 +234,48 @@ O frontend estará disponível em `http://localhost:5173`
 ## 📡 API Endpoints
 
 ### Autenticação de Usuários
-- `POST /api/usuarios/cadastro` - Cadastro de usuário
-- `POST /api/usuarios/login` - Login de usuário
+- `POST /usuarios/` - Cadastro de usuário
+- `POST /usuarios/login` - Login de usuário
+- `GET /usuarios/me` - Obter dados do usuário logado
+- `PUT /usuarios/me` - Atualizar perfil do usuário
+- `PUT /usuarios/me/senha` - Alterar senha do usuário
 
 ### Autenticação de Restaurantes
-- `POST /api/restaurantes/cadastro` - Cadastro de restaurante
-- `POST /api/restaurantes/login` - Login de restaurante
+- `POST /restaurantes/registro` - Cadastro de restaurante
+- `POST /restaurantes/login` - Login de restaurante
+- `GET /restaurantes/me` - Obter dados do restaurante logado
+- `PUT /restaurantes/me` - Atualizar perfil do restaurante
+- `PUT /restaurantes/me/senha` - Alterar senha do restaurante
+- `PUT /restaurantes/foto-perfil` - Atualizar foto de perfil
 
 ### Restaurantes
-- `GET /api/restaurantes` - Lista todos os restaurantes ativos
-- `GET /api/restaurantes/{id}` - Detalhes de um restaurante
-- `GET /api/restaurantes/{id}/menu` - Cardápio de um restaurante
+- `GET /restaurantes` - Lista todos os restaurantes ativos
+- `GET /restaurantes/{id}` - Detalhes de um restaurante
+- `GET /restaurantes/{id}/menu` - Cardápio de um restaurante
+- `GET /restaurantes/estatisticas` - Estatísticas do restaurante logado (requer autenticação)
 
 ### Pratos
-- `GET /api/restaurantes/{id}/pratos` - Lista pratos de um restaurante
-- `POST /api/restaurantes/{id}/pratos` - Cria um novo prato (requer autenticação)
-- `PUT /api/pratos/{id}` - Atualiza um prato (requer autenticação)
-- `DELETE /api/pratos/{id}` - Remove um prato (requer autenticação)
+- `GET /restaurantes/{id}/menu` - Lista pratos de um restaurante
+- `POST /restaurantes/{id}/menu` - Cria um novo prato (requer autenticação)
+- `PUT /restaurantes/menu/{prato_id}` - Atualiza um prato (requer autenticação)
+- `DELETE /restaurantes/menu/{prato_id}` - Remove um prato (requer autenticação)
 
 ### Pedidos
-- `POST /api/pedidos` - Cria um novo pedido (requer autenticação)
-- `GET /api/pedidos/meus-pedidos` - Lista pedidos do usuário (requer autenticação)
-- `GET /api/pedidos/restaurante` - Lista pedidos do restaurante (requer autenticação)
-- `PUT /api/pedidos/{id}/status` - Atualiza status do pedido (requer autenticação)
+- `POST /pedidos` - Cria um novo pedido (requer autenticação)
+- `GET /pedidos/usuario/me` - Lista pedidos do usuário logado (requer autenticação)
+- `GET /pedidos/restaurante/{restaurante_id}` - Lista pedidos do restaurante (requer autenticação)
+- `PUT /pedidos/{pedido_id}/status` - Atualiza status do pedido (requer autenticação)
 
 ### Avaliações
-- `POST /api/avaliacoes` - Cria uma avaliação (requer autenticação)
-- `GET /api/restaurantes/{id}/avaliacoes` - Lista avaliações de um restaurante
+- `POST /avaliacoes/` - Cria uma avaliação (requer autenticação)
+- `GET /avaliacoes/restaurante/{restaurante_id}` - Lista avaliações de um restaurante
+- `GET /avaliacoes/pedido/{pedido_id}` - Obtém avaliação de um pedido específico
 
 ### Uploads
-- `POST /api/uploads` - Upload de imagens (requer autenticação)
+- `POST /uploads/prato/{prato_id}` - Upload de imagem para prato (requer autenticação)
+
+### WebSocket
+- `WS /ws/restaurante/{restaurante_id}` - Conexão WebSocket para notificações em tempo real
 
 ## 🗄️ Estrutura do Banco de Dados
 
@@ -259,10 +291,16 @@ O frontend estará disponível em `http://localhost:5173`
 ## 🔮 Funcionalidades Futuras
 
 - [✅] Finalização completa do sistema de pedidos (backend e frontend)
+- [✅] Sistema de notificações em tempo real (WebSocket)
+- [✅] Edição de perfil para usuários e restaurantes
+- [✅] Alteração de senha para usuários e restaurantes
+- [✅] Validações de dados (telefone, CEP, estado)
+- [✅] Sistema inteligente de compatibilidade de restrições alimentares
 - [ ] Sistema de recomendação automática baseado no perfil do usuário
 - [ ] Implementação de IA para recomendações personalizadas
-- [ ] Refinamento da interface do usuário
-- [ ] Sistema de notificações em tempo real
+- [ ] Busca automática de CEP (integração com ViaCEP)
+- [ ] Filtros avançados para restaurantes (por tipo de dieta, restrições)
+- [ ] Sistema de favoritos
 - [ ] Integração com serviços de pagamento
 - [ ] Sistema de cupons e promoções
 - [ ] App mobile (React Native)

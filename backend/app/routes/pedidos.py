@@ -5,6 +5,7 @@ from .. import crud, schemas, models
 from ..database import get_db
 from ..auth import obter_usuario_atual
 from ..auth_restaurante import get_current_restaurante
+from ..websocket_manager import manager
 from uuid import UUID
 
 router = APIRouter(prefix="/pedidos", tags=["pedidos"]) #todas as rotas começam com pedidos
@@ -16,7 +17,21 @@ async def criar_pedido(
     usuario: models.Usuario = Depends(obter_usuario_atual)
 ):
     """Cria um novo pedido associado ao usuário logado"""
-    return await crud.create_pedido(db, payload, usuario.usuario_id)
+    pedido = await crud.create_pedido(db, payload, usuario.usuario_id)
+    
+    # Notifica o restaurante via WebSocket
+    await manager.broadcast_to_restaurante(
+        str(payload.restaurante_id),
+        {
+            "type": "novo_pedido",
+            "pedido_id": str(pedido.pedido_id),
+            "total": float(pedido.total),
+            "status": pedido.status,
+            "data_pedido": pedido.data_pedido.isoformat() if hasattr(pedido.data_pedido, 'isoformat') else str(pedido.data_pedido)
+        }
+    )
+    
+    return pedido
 
 @router.get("/restaurante/{restaurante_id}", response_model=list[schemas.PedidoOut])
 async def listar_pedidos_restaurante(

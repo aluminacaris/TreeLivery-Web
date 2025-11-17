@@ -49,12 +49,48 @@ export default function Menu() {
     // Verifica restrições do usuário
     if (usuario.restricoes && usuario.restricoes.length > 0) {
       if (prato.restricoes && prato.restricoes.length > 0) {
-        const temRestricaoIncompativel = prato.restricoes.some((r) =>
-          usuario.restricoes.some((ur) => 
-            r.toLowerCase().includes(ur.toLowerCase()) || 
-            ur.toLowerCase().includes(r.toLowerCase())
-          )
-        );
+        // Normaliza as restrições para comparação (remove espaços, acentos, etc)
+        const normalizar = (str) => str.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        // Lista de restrições conhecidas que podem ter variações
+        const restricoesConhecidas = {
+          "gluten": ["glúten", "gluten"],
+          "lactose": ["lactose"],
+          "castanhas": ["castanhas", "nozes", "amendoim"],
+          "ovo": ["ovo", "ovos"],
+          "mariscos": ["mariscos", "frutos do mar", "peixe"],
+          "soja": ["soja"],
+          "açúcar": ["açúcar", "acucar", "açucar", "açucar"],
+        };
+        
+        // Verifica se há alguma restrição incompatível
+        const temRestricaoIncompativel = prato.restricoes.some((r) => {
+          const rNormalizado = normalizar(r);
+          
+          return usuario.restricoes.some((ur) => {
+            const urNormalizado = normalizar(ur);
+            
+            // Comparação exata primeiro (mais precisa)
+            if (rNormalizado === urNormalizado) {
+              return true;
+            }
+            
+            // Para restrições conhecidas, verifica variações
+            for (const [key, variacoes] of Object.entries(restricoesConhecidas)) {
+              const keyNormalizado = normalizar(key);
+              if (rNormalizado === keyNormalizado || variacoes.some(v => normalizar(v) === rNormalizado)) {
+                if (urNormalizado === keyNormalizado || variacoes.some(v => normalizar(v) === urNormalizado)) {
+                  return true;
+                }
+              }
+            }
+            
+            // Para restrições personalizadas, só marca como incompatível se for exatamente igual
+            // Não usa includes() para evitar falsos positivos
+            return false;
+          });
+        });
+        
         if (temRestricaoIncompativel) return false;
       }
     }

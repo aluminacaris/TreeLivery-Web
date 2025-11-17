@@ -16,6 +16,7 @@ import CadastroRestaurante from "./pages/CadastroRestaurante";
 import PedidosRestaurante from "./pages/PedidosRestaurante";
 import MeusPedidos from "./pages/MeusPedidos";
 import DashboardRestaurante from "./pages/DashboardRestaurante";
+import PerfilUsuario from "./pages/PerfilUsuario";
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
               <Route element={<Layout protegido />}> 
                 <Route path="/restaurante/:restauranteId" element={<Menu />} />
                 <Route path="/meus-pedidos" element={<MeusPedidos />} />
+                <Route path="/perfil" element={<PerfilUsuario />} />
               </Route>
               
               {/* Protegido - restaurante logado */}

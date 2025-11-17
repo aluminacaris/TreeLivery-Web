@@ -28,3 +28,37 @@ async def get_usuario_atual(usuario: models.Usuario = Depends(obter_usuario_atua
     Retorna os dados do usuário autenticado com base no token JWT.
     """
     return usuario
+
+@router.put("/me", response_model=schemas.UsuarioOut)
+async def atualizar_usuario(
+    payload: schemas.UsuarioUpdate,
+    usuario: models.Usuario = Depends(obter_usuario_atual),
+    db: AsyncSession = Depends(get_db)
+):
+    """Atualiza os dados do usuário logado"""
+    usuario_atualizado = await crud.update_usuario(db, usuario.usuario_id, payload)
+    if not usuario_atualizado:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return usuario_atualizado
+
+@router.put("/me/senha")
+async def alterar_senha_usuario(
+    payload: schemas.UsuarioAlterarSenha,
+    usuario: models.Usuario = Depends(obter_usuario_atual),
+    db: AsyncSession = Depends(get_db)
+):
+    """Altera a senha do usuário logado"""
+    try:
+        usuario_atualizado = await crud.alterar_senha_usuario(
+            db, 
+            usuario.usuario_id, 
+            payload.senha_atual, 
+            payload.senha_nova
+        )
+        if not usuario_atualizado:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        return {"message": "Senha alterada com sucesso"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

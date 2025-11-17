@@ -1,4 +1,4 @@
-# app/auth_restaurante.py
+#type: ignore   
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from fastapi import Depends, HTTPException, status
