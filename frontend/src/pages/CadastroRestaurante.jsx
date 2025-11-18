@@ -27,6 +27,7 @@ export default function CadastroRestaurante() {
     });
     
     const [previewFoto, setPreviewFoto] = useState(null);
+    const [buscandoCEP, setBuscandoCEP] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -70,13 +71,25 @@ export default function CadastroRestaurante() {
         // Verifica se o campo pertence ao endereço
         else if (name.startsWith("endereco.")) {
             const enderecoField = name.split(".")[1];
-            setForm(prev => ({
-                ...prev,
+            const newForm = {
+                ...form,
                 endereco: {
-                    ...prev.endereco,
+                    ...form.endereco,
                     [enderecoField]: value
                 }
-            }));
+            };
+            setForm(newForm);
+            
+            // Se for o campo CEP e tiver 8 dígitos, busca automaticamente
+            if (enderecoField === "cep") {
+                const cepLimpo = value.replace(/\D/g, '');
+                if (cepLimpo.length === 8) {
+                    // Aguarda um pouco para o usuário terminar de digitar
+                    setTimeout(() => {
+                        buscarCEP(value);
+                    }, 500);
+                }
+            }
         } else {
             setForm(prev => ({
                 ...prev,
@@ -93,6 +106,48 @@ export default function CadastroRestaurante() {
     function validarCEP(cep) {
         const re = /^\d{5}-?\d{3}$/;
         return re.test(cep.replace(/\D/g, ''));
+    }
+
+    async function buscarCEP(cep) {
+        // Remove caracteres não numéricos
+        const cepLimpo = cep.replace(/\D/g, '');
+        
+        // Só busca se tiver 8 dígitos
+        if (cepLimpo.length !== 8) {
+            return;
+        }
+
+        setBuscandoCEP(true);
+        try {
+            const response = await axios.get(`http://localhost:8000/cep/${cepLimpo}`);
+            const dados = response.data;
+            
+            // Preenche os campos automaticamente
+            setForm(prev => ({
+                ...prev,
+                endereco: {
+                    ...prev.endereco,
+                    logradouro: dados.logradouro || prev.endereco.logradouro,
+                    bairro: dados.bairro || prev.endereco.bairro,
+                    cidade: dados.cidade || prev.endereco.cidade,
+                    estado: dados.estado || prev.endereco.estado,
+                    complemento: dados.complemento || prev.endereco.complemento
+                }
+            }));
+            
+            if (dados.logradouro) {
+                success("Endereço encontrado e preenchido automaticamente!");
+            }
+        } catch (err) {
+            console.error("Erro ao buscar CEP:", err);
+            if (err.response?.status === 404) {
+                error("CEP não encontrado. Por favor, preencha o endereço manualmente.");
+            } else {
+                error("Erro ao buscar CEP. Tente novamente.");
+            }
+        } finally {
+            setBuscandoCEP(false);
+        }
     }
 
     async function handleSubmit(e) {
@@ -340,15 +395,31 @@ export default function CadastroRestaurante() {
                     <h3 className="font-semibold mb-3 text-primario">📌 Endereço</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                            type="text"
-                            name="endereco.cep"
-                            placeholder="CEP"
-                            value={form.endereco.cep}
-                            onChange={handleChange}
-                            className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primario"
-                            required
-                        />
+                        <div className="relative">
+                            <input
+                                type="text"
+                                name="endereco.cep"
+                                placeholder="CEP"
+                                value={form.endereco.cep}
+                                onChange={(e) => {
+                                    let value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 8) {
+                                        if (value.length > 5) {
+                                            value = `${value.slice(0, 5)}-${value.slice(5)}`;
+                                        }
+                                        handleChange({ target: { name: "endereco.cep", value } });
+                                    }
+                                }}
+                                maxLength={9}
+                                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-primario"
+                                required
+                            />
+                            {buscandoCEP && (
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primario"></div>
+                                </div>
+                            )}
+                        </div>
 
                         <input
                             type="text"

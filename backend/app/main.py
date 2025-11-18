@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .routes import restaurantes, pedidos, usuarios, uploads, avaliacoes
+from .routes import restaurantes, pedidos, usuarios, uploads, avaliacoes, cep
 from .database import Base, engine
 from .websocket_manager import manager
 from .auth_restaurante import get_current_restaurante
@@ -31,6 +31,7 @@ app.include_router(pedidos.router)       #inclui as rotas de pedidos
 app.include_router(usuarios.router)     #inclui as rotas de usuários    
 app.include_router(uploads.router)     #inclui as rotas de uploads
 app.include_router(avaliacoes.router)  #inclui as rotas de avaliações
+app.include_router(cep.router)         #inclui as rotas de CEP
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 

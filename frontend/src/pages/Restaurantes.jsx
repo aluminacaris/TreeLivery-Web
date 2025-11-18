@@ -29,6 +29,7 @@ export default function RestaurantesAdmin() {
   const [previewFoto, setPreviewFoto] = useState(null);
   const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [alterandoSenha, setAlterandoSenha] = useState(false);
+  const [buscandoCEP, setBuscandoCEP] = useState(false);
   const [formSenha, setFormSenha] = useState({
     senha_atual: "",
     senha_nova: "",
@@ -294,6 +295,49 @@ export default function RestaurantesAdmin() {
     }
   }, [restaurante]);
 
+  // Buscar CEP via API
+  async function buscarCEP(cep) {
+    // Remove caracteres não numéricos
+    const cepLimpo = cep.replace(/\D/g, '');
+    
+    // Só busca se tiver 8 dígitos
+    if (cepLimpo.length !== 8) {
+      return;
+    }
+
+    setBuscandoCEP(true);
+    try {
+      const response = await axios.get(`http://localhost:8000/cep/${cepLimpo}`);
+      const dados = response.data;
+      
+      // Preenche os campos automaticamente
+      setFormPerfil(prev => ({
+        ...prev,
+        endereco: {
+          ...prev.endereco,
+          logradouro: dados.logradouro || prev.endereco.logradouro,
+          bairro: dados.bairro || prev.endereco.bairro,
+          cidade: dados.cidade || prev.endereco.cidade,
+          estado: dados.estado || prev.endereco.estado,
+          complemento: dados.complemento || prev.endereco.complemento
+        }
+      }));
+      
+      if (dados.logradouro) {
+        success("Endereço encontrado e preenchido automaticamente!");
+      }
+    } catch (err) {
+      console.error("Erro ao buscar CEP:", err);
+      if (err.response?.status === 404) {
+        error("CEP não encontrado. Por favor, preencha o endereço manualmente.");
+      } else {
+        error("Erro ao buscar CEP. Tente novamente.");
+      }
+    } finally {
+      setBuscandoCEP(false);
+    }
+  }
+
   // Atualizar perfil do restaurante
   async function atualizarPerfil() {
     try {
@@ -490,25 +534,39 @@ export default function RestaurantesAdmin() {
                       <div className="border-t pt-3 mt-3">
                         <p className="text-sm font-semibold mb-2 text-gray-700">Endereço:</p>
                         <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            placeholder="CEP (ex: 12345-678)"
-                            value={formPerfil.endereco.cep}
-                            onChange={(e) => {
-                              let value = e.target.value.replace(/\D/g, '');
-                              if (value.length <= 8) {
-                                if (value.length > 5) {
-                                  value = `${value.slice(0, 5)}-${value.slice(5)}`;
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="CEP (ex: 12345-678)"
+                              value={formPerfil.endereco.cep}
+                              onChange={(e) => {
+                                let value = e.target.value.replace(/\D/g, '');
+                                if (value.length <= 8) {
+                                  if (value.length > 5) {
+                                    value = `${value.slice(0, 5)}-${value.slice(5)}`;
+                                  }
+                                  setFormPerfil({ 
+                                    ...formPerfil, 
+                                    endereco: { ...formPerfil.endereco, cep: value }
+                                  });
+                                  
+                                  // Busca automaticamente quando tiver 8 dígitos
+                                  if (value.replace(/\D/g, '').length === 8) {
+                                    setTimeout(() => {
+                                      buscarCEP(value);
+                                    }, 500);
+                                  }
                                 }
-                                setFormPerfil({ 
-                                  ...formPerfil, 
-                                  endereco: { ...formPerfil.endereco, cep: value }
-                                });
-                              }
-                            }}
-                            maxLength={9}
-                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
-                          />
+                              }}
+                              maxLength={9}
+                              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-primario"
+                            />
+                            {buscandoCEP && (
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primario"></div>
+                              </div>
+                            )}
+                          </div>
                           <input
                             type="text"
                             placeholder="Estado (ex: SP)"
