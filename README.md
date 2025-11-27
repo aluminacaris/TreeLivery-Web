@@ -274,6 +274,9 @@ O frontend estará disponível em `http://localhost:5173`
 ### Uploads
 - `POST /uploads/prato/{prato_id}` - Upload de imagem para prato (requer autenticação)
 
+### CEP
+- `GET /cep/{cep}` - Busca endereço pelo CEP (integração ViaCEP)
+
 ### WebSocket
 - `WS /ws/restaurante/{restaurante_id}` - Conexão WebSocket para notificações em tempo real
 
@@ -298,11 +301,11 @@ O frontend estará disponível em `http://localhost:5173`
 - [✅] Sistema inteligente de compatibilidade de restrições alimentares
 - [ ] Sistema de recomendação automática baseado no perfil do usuário
 - [ ] Implementação de IA para recomendações personalizadas
-- [ ] Busca automática de CEP (integração com ViaCEP)
+- [✅] Busca automática de CEP (integração com ViaCEP)
 - [ ] Filtros avançados para restaurantes (por tipo de dieta, restrições)
 - [ ] Sistema de favoritos
 - [ ] Integração com serviços de pagamento
 - [ ] Sistema de cupons e promoções
-- [ ] App mobile (React Native)
+- [✅] App mobile (React Native/Expo) - [Repositório separado](https://github.com/aluminacaris/TreeLivery-Mobile)
 
 Desenvolvido com ❤️ para facilitar a vida de pessoas com necessidades alimentares específicas.
