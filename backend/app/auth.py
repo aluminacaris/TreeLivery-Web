@@ -9,7 +9,7 @@ from . import models, database
 from .database import get_db
 import sqlalchemy as sa
 
-SECRET_KEY = "Sup3rS3gur0!@#"  # ⚠️ em produção, guarde isso em variável de ambiente
+SECRET_KEY = "Sup3rS3gur0!@#"  # em produção, guardar em variável de ambiente
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
